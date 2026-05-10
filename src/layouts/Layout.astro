@@ -1,6 +1,7 @@
 ---
 import { pwaInfo } from "virtual:pwa-info"
 import ReloadPrompt from "../components/ReloadPrompt.svelte"
+import Toast from "../components/Toast.svelte"
 import "../styles/global.css"
 
 interface Props {
@@ -25,6 +26,7 @@ const assetBaseUrl = baseUrl.replace(/\/$/, "")
 	</head>
 	<body>
 		<slot />
+		<Toast client:load />
 		<ReloadPrompt client:load />
 	</body>
 </html>

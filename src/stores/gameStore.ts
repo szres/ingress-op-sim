@@ -32,6 +32,43 @@ export interface GameState {
   pendingLinkPortalId: string | null
 }
 
+export interface ToastMessage {
+  id: string
+  text: string
+  type: 'info' | 'warning' | 'error' | 'success'
+}
+
+// Shared agent colors
+export const AGENT_COLORS = [
+  '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
+  '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff',
+  '#9a6324', '#fffac8', '#800000', '#aaffc3',
+]
+
+export function getAgentColor(agentId: string, agents: Array<{ id: string }>): string {
+  const idx = agents.findIndex(a => a.id === agentId)
+  return AGENT_COLORS[Math.max(0, idx) % AGENT_COLORS.length]
+}
+
+// ---- Toast Store ----
+
+function createToastStore() {
+  const { subscribe, update } = writable<ToastMessage[]>([])
+
+  function add(text: string, type: ToastMessage['type'] = 'info') {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    update(messages => [...messages, { id, text, type }])
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      update(messages => messages.filter(m => m.id !== id))
+    }, 3000)
+  }
+
+  return { subscribe, add }
+}
+
+export const toastStore = createToastStore()
+
 // ---- Helper functions ----
 
 function sortPair(a: string, b: string): [string, string] {
@@ -64,7 +101,6 @@ function wouldCrossLink(
   const getPortal = (id: string) => portals.find(p => p.id === id)!
   const pa = getPortal(aId)
   const pb = getPortal(bId)
-
   for (const [sId, tId] of links) {
     if (sId === aId && tId === bId) return false
     if (sId === bId && tId === aId) return false
@@ -155,11 +191,7 @@ function createGameStore() {
     update(s => {
       const num = s.portals.length + 1
       const id = `portal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      return {
-        ...s,
-        portals: [...s.portals, { id, x, y, label: `P${num}` }],
-        pendingLinkPortalId: null,
-      }
+      return { ...s, portals: [...s.portals, { id, x, y, label: `P${num}` }], pendingLinkPortalId: null }
     })
   }
 
@@ -167,7 +199,7 @@ function createGameStore() {
     update(s => {
       const agent = s.selectedAgentId
       if (!agent) {
-        alert('Please select an Agent first')
+        toastStore.add('Please select an Agent first', 'warning')
         return { ...s, pendingLinkPortalId: null }
       }
       if (s.pendingLinkPortalId === null) {
@@ -181,11 +213,11 @@ function createGameStore() {
         ([a, b]) => (a === srcId && b === tgtId) || (a === tgtId && b === srcId)
       )
       if (existingLink) {
-        alert('Link already exists between these portals')
+        toastStore.add('Link already exists between these portals', 'warning')
         return { ...s, pendingLinkPortalId: null }
       }
       if (wouldCrossLink(s.portals, s.links, srcId, tgtId)) {
-        alert('Link would cross an existing link!')
+        toastStore.add('Link would cross an existing link!', 'error')
         return { ...s, pendingLinkPortalId: null }
       }
 
@@ -254,7 +286,6 @@ function createGameStore() {
         const triKeys = [sortPair(f[0], f[1]).join(','), sortPair(f[1], f[2]).join(','), sortPair(f[0], f[2]).join(',')]
         return triKeys.includes(linkKey)
       })
-
       const newLinks = s.links.filter((_, i) => i !== linkIdx)
       const newFields = s.fields.filter(f => !fieldsToRemove.includes(f))
 
@@ -268,13 +299,11 @@ function createGameStore() {
         fc.fieldDelta -= 1; fc.apDelta -= 1250
         agentChanges.set(fAgentId, fc)
       }
-
       const newAgents = s.agents.map(a => {
         const ch = agentChanges.get(a.id)
         if (!ch) return a
         return { ...a, linkCount: Math.max(0, a.linkCount + ch.linkDelta), fieldCount: Math.max(0, a.fieldCount + ch.fieldDelta), ap: Math.max(0, a.ap + ch.apDelta) }
       })
-
       return { ...s, links: newLinks, fields: newFields, agents: newAgents, pendingLinkPortalId: null }
     })
   }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameStore } from '../stores/gameStore'
+  import { gameStore, getAgentColor } from '../stores/gameStore'
 
   let agents: Array<{ id: string; name: string; linkCount: number; fieldCount: number; ap: number }> = $state([])
   let selectedAgentId: string | null = $state(null)
@@ -58,7 +58,7 @@
           class:border-transparent={selectedAgentId !== agent.id}
           onclick={() => handleSelect(agent.id)}
         >
-          <div class="font-semibold text-sm text-base-content">{agent.name}</div>
+          <div class="font-semibold text-sm" style="color: {getAgentColor(agent.id, agents)}">{agent.name}</div>
           <div class="flex gap-3 text-xs text-base-content/70 mt-1">
             <span>🔗 {agent.linkCount}</span>
             <span>⬡ {agent.fieldCount}</span>

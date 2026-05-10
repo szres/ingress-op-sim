@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { gameStore } from '../stores/gameStore'
+  import { gameStore, getAgentColor } from '../stores/gameStore'
 
   let canvasEl: HTMLCanvasElement
   let ctx: CanvasRenderingContext2D | null = null
@@ -9,24 +9,13 @@
   const LINK_WIDTH = 2.5
   const FIELD_OPACITY = 0.12
 
-  const AGENT_COLORS = [
-    '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
-    '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff',
-    '#9a6324', '#fffac8', '#800000', '#aaffc3',
-  ]
-
   let mouseX = 0
   let mouseY = 0
-
-  function getAgentColor(agentId: string, agents: Array<{ id: string }>): string {
-    const idx = agents.findIndex(a => a.id === agentId)
-    return AGENT_COLORS[Math.max(0, idx) % AGENT_COLORS.length]
-  }
 
   function render() {
     if (!ctx) return
     const state = gameStore.getState()
-    const { portals, links, fields, agents, pendingLinkPortalId, mode } = state
+    const { portals, links, fields, agents, pendingLinkPortalId, selectedAgentId, mode } = state
 
     // Sync canvas internal size to its CSS display size
     const rect = canvasEl.getBoundingClientRect()
@@ -73,14 +62,15 @@
       ctx.stroke()
     }
 
-    // Draw pending link preview
+    // Draw pending link preview (using selected agent's color)
     if (mode === 'link' && pendingLinkPortalId && mouseX > 0 && mouseY > 0) {
       const src = portals.find(p => p.id === pendingLinkPortalId)
       if (src) {
+        const color = selectedAgentId ? getAgentColor(selectedAgentId, agents) : '#ff6600'
         ctx.beginPath()
         ctx.moveTo(src.x, src.y)
         ctx.lineTo(mouseX, mouseY)
-        ctx.strokeStyle = 'rgba(255, 102, 0, 0.6)'
+        ctx.strokeStyle = color
         ctx.lineWidth = LINK_WIDTH
         ctx.setLineDash([6, 4])
         ctx.stroke()
