@@ -39,6 +39,8 @@ export interface ToastMessage {
 }
 
 // Shared agent colors
+export const MIN_PORTAL_DISTANCE = 30
+
 export const AGENT_COLORS = [
   '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
   '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff',
@@ -332,9 +334,15 @@ function createGameStore() {
   function handleCanvasClick(cx: number, cy: number) {
     const state = get({ subscribe })
     switch (state.mode) {
-      case 'portal':
+      case 'portal': {
+        const tooClose = state.portals.some(p => Math.hypot(cx - p.x, cy - p.y) < MIN_PORTAL_DISTANCE)
+        if (tooClose) {
+          toastStore.add('Too close to an existing portal!', 'error')
+          return
+        }
         addPortal(cx, cy)
         break
+      }
       case 'link': {
         const portalId = findPortalAt(cx, cy, state.portals)
         if (portalId) handleLinkClick(portalId)

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { gameStore, getAgentColor } from '../stores/gameStore'
+  import { gameStore, getAgentColor, MIN_PORTAL_DISTANCE } from '../stores/gameStore'
 
   let canvasEl: HTMLCanvasElement
   let ctx: CanvasRenderingContext2D | null = null
@@ -12,6 +12,9 @@
 
   let mouseX = 0
   let mouseY = 0
+  let mouseInCanvas = false
+  let hoveredPortalId: string | null = null
+  let cursorForbidden = false
 
   function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, size: number, color: string) {
     ctx.save()
@@ -92,9 +95,14 @@
       const src = portals.find(p => p.id === pendingLinkPortalId)
       if (src) {
         const color = selectedAgentId ? getAgentColor(selectedAgentId, agents) : '#ff6600'
+        const target = hoveredPortalId && hoveredPortalId !== pendingLinkPortalId
+          ? portals.find(p => p.id === hoveredPortalId)
+          : null
+        const endX = target ? target.x : mouseX
+        const endY = target ? target.y : mouseY
         ctx.beginPath()
         ctx.moveTo(src.x, src.y)
-        ctx.lineTo(mouseX, mouseY)
+        ctx.lineTo(endX, endY)
         ctx.strokeStyle = color
         ctx.lineWidth = LINK_WIDTH
         ctx.setLineDash([6, 4])
@@ -160,6 +168,70 @@
         ctx.stroke()
       }
     }
+
+    // Hover highlight in link mode
+    if (mode === 'link' && hoveredPortalId) {
+      const hp = portals.find(p => p.id === hoveredPortalId)
+      if (hp && hoveredPortalId !== pendingLinkPortalId) {
+        ctx.beginPath()
+        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 6, 0, Math.PI * 2)
+        ctx.strokeStyle = '#00ff88'
+        ctx.lineWidth = 2.5
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(0, 255, 136, 0.15)'
+        ctx.fill()
+      }
+    }
+
+    // Hover highlight in delete mode
+    if (mode === 'delete' && hoveredPortalId) {
+      const hp = portals.find(p => p.id === hoveredPortalId)
+      if (hp) {
+        ctx.beginPath()
+        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 6, 0, Math.PI * 2)
+        ctx.strokeStyle = '#ff4444'
+        ctx.lineWidth = 2.5
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(255, 68, 68, 0.15)'
+        ctx.fill()
+      }
+    }
+
+    // Ghost portal cursor in portal mode
+    if (mode === 'portal' && mouseInCanvas && mouseX > 0 && mouseY > 0) {
+      const nearestDist = portals.reduce((min, p) => Math.min(min, Math.hypot(mouseX - p.x, mouseY - p.y)), Infinity)
+      const tooClose = nearestDist < MIN_PORTAL_DISTANCE
+      const fillColor = tooClose ? 'rgba(255, 50, 50, 0.4)' : 'rgba(0, 102, 204, 0.3)'
+      const strokeColor = tooClose ? '#ff3333' : 'rgba(0, 153, 255, 0.5)'
+
+      ctx.beginPath()
+      ctx.arc(mouseX, mouseY, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+      ctx.fillStyle = tooClose ? 'rgba(255, 50, 50, 0.15)' : 'rgba(0, 150, 255, 0.1)'
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(mouseX, mouseY, PORTAL_RADIUS, 0, Math.PI * 2)
+      ctx.fillStyle = fillColor
+      ctx.fill()
+      ctx.strokeStyle = strokeColor
+      ctx.lineWidth = 2
+      ctx.stroke()
+
+      if (tooClose) {
+        ctx.strokeStyle = '#ff3333'
+        ctx.lineWidth = 2.5
+        const s = 5
+        ctx.beginPath()
+        ctx.moveTo(mouseX - s, mouseY - s)
+        ctx.lineTo(mouseX + s, mouseY + s)
+        ctx.moveTo(mouseX + s, mouseY - s)
+        ctx.lineTo(mouseX - s, mouseY + s)
+        ctx.stroke()
+      }
+    }
   }
 
   function handleClick(e: MouseEvent) {
@@ -173,6 +245,21 @@
     const rect = canvasEl.getBoundingClientRect()
     mouseX = e.clientX - rect.left
     mouseY = e.clientY - rect.top
+    mouseInCanvas = true
+    const state = gameStore.getState()
+    if (state.mode === 'link' || state.mode === 'delete') {
+      hoveredPortalId = gameStore.findPortalAt(mouseX, mouseY, state.portals)
+    } else {
+      hoveredPortalId = null
+    }
+    cursorForbidden = state.mode === 'portal' && state.portals.some(p => Math.hypot(mouseX - p.x, mouseY - p.y) < MIN_PORTAL_DISTANCE)
+    render()
+  }
+
+  function handleMouseLeave() {
+    mouseInCanvas = false
+    hoveredPortalId = null
+    cursorForbidden = false
     render()
   }
 
@@ -221,7 +308,8 @@
 <canvas
   bind:this={canvasEl}
   class="w-full h-full"
-  style="min-width: 200px; min-height: 200px; background: #1a1a2e; display: block; cursor: crosshair;"
+  style="min-width: 200px; min-height: 200px; background: #1a1a2e; display: block; cursor: {cursorForbidden ? 'not-allowed' : 'default'};"
   onclick={handleClick}
   onmousemove={handleMouseMove}
+  onmouseleave={handleMouseLeave}
 ></canvas>
