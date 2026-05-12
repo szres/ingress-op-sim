@@ -1,99 +1,58 @@
-# Astro PWA Template (Svelte + Tailwind + DaisyUI)
+# Ingress OP Sim
 
-This is a production-ready starter template for building Progressive Web Apps (PWA) using **Astro**. It combines the performance of Astro with the interactivity of Svelte, styled with Tailwind CSS v4 and DaisyUI.
+A web-based planning tool for [Ingress](https://ingress.com/) operations. Place portals on a canvas, build links between them, form control fields, and track per-agent AP in real time.
 
-<img alt="image" src="https://github.com/user-attachments/assets/4a1fa0a7-d0e0-48ad-910d-26bb27595b0f" />
+![Screenshot](./docs/screenshot.png)
 
-## 🚀 Tech Stack
+## Features
 
-* **Framework:** [Astro](https://astro.build)
-* **UI Library:** [Svelte](https://svelte.dev)
-* **Styling:** [Tailwind CSS](https://tailwindcss.com)
-* **Components:** [DaisyUI](https://daisyui.com)
-* **PWA:** [Vite Plugin PWA](https://vite-pwa-org.netlify.app/)
-* **Routing:** Astro View Transitions
+- **Portal placement** — Click the canvas to drop portals (auto-named P1, P2, …)
+- **Link creation** — Select an agent, click two portals to link them
+- **Field detection** — Triangles are auto-detected when a link completes a closed loop; multi-layer overlapping fields are fully supported
+- **Ingress rule enforcement** — Links that would cross an existing link are rejected, just like in the game
+- **Multi-agent tracking** — Add up to 16 agents, each with independent link count, field count, and AP
+- **AP calculation** — +313 AP per link, +1250 AP per field, updated in real time
+- **Cascade deletion** — Deleting a portal removes all its links and dependent fields; deleting a link removes its fields
+- **PWA support** — Installable as a Progressive Web App for offline use
 
-## ✨ Features
+## Getting Started
 
-* **💯 Lighthouse Score:** Optimized for speed and SEO.
-* **📱 Installable:** Fully configured `manifest.webmanifest` and Service Worker.
-* **🔄 Auto-Update:** Includes a DaisyUI "New Version Available" toast prompt.
-* **⚡ View Transitions:** Native app-like navigation animations.
-* **🎨 Theming:** Tailwind + DaisyUI plugin setup in `global.css`.
+Open the app in your browser. No login or installation required.
 
-## 🛠️ Prerequisites
+## How to Use
 
-* Node.js v18.14.1+
-* npm
+### Tools
 
-## 📦 Start Develop
+The toolbar at the top has three modes:
 
-1.  **Clone the repository:**
-    Click the `Use this template` button in the GitHub repo page.  
-	Then choose `Create a new repository`.
+| Tool | What it does |
+|------|-------------|
+| **Portal** | Click an empty area on the canvas to place a new portal |
+| **Link** | Click portal A, then portal B to create a link between them |
+| **Delete** | Click a portal to remove it (and all connected links/fields), or click a link to remove just that link |
 
-2.  **Install dependencies:**  
-	In the repo you create:
-    ```bash
-    npm install
-    ```
+### Agents
 
-3.  **Start dev server**
-	```bash
-	npm run dev
-	```
+- The right panel shows all agents and their stats
+- Click an agent card to select them — all new links will be credited to the selected agent
+- Use the **+** button to add more agents (up to 16)
+- Each agent independently tracks link count, field count, and AP
 
-## 🧞 Commands
+### Clearing
 
-| Command | Action |
-| :--- | :--- |
-| `npm run dev` | Starts local dev server at `localhost:4321` |
-| `npm run build` | Build your production site to `./dist/` |
-| `npm run preview` | Preview your build locally |
-| `npm run astro ...` | Run CLI commands like `astro add` |
+- **Clear Portals** — Removes all portals, links, and fields; resets all agent stats
+- **Clear Links** — Removes all links and fields but keeps portals in place
 
-## ✅ Develop Tips
+## Roadmap
 
-> [!TIP]
-> You **must** add your icons to the `public/` folder for the PWA to be installable:  
->	* `public/pwa-192x192.png`  
->   * `public/pwa-512x512.png`  
->   * `public/favicon.svg`
+Planned features for future releases:
 
+1. **Operation timeline** — Record every action in a step-by-step timeline
+2. **Export key lists** — Export per-agent key lists and operation sequences
+3. **IITC import** — Import real portal data from IITC for planning
+4. **Plan sharing** — Export and import operation plans to share with other agents
+5. **Event scoring** — Calculate scores for Ingress events (e.g., All kinds of Global ops)
 
-> [!TIP]
-> The `Reload` prompt usually does not show up in npm run dev mode because the service worker behavior is different in development.
->	* you should build the project by: `npm run build`
->	* Then preview the build: `npm run preview`
->	* Open the preview URL (usually `localhost:4321`) in your browser.
->	* Go to your code and make a small visible change, then run `npm run build` again.
->	* Go back to the `localhost:4321` page and refresh manually once.
->	* The Service Worker will detect the new hash in the background, and the Toast should pop up asking you to "Reload" to apply the new version.
+## License
 
-> [!TIP]
-> For DaisyUI theme setup and advanced theme config, please refer to the official docs:
-> https://daisyui.com/docs/themes/
-
-
-
-
-## 📂 Project Structure
-
-```text
-/
-├── public/
-│   ├── pwa-192x192.png      # Required for PWA
-│   ├── pwa-512x512.png      # Required for PWA
-│   └── manifest.webmanifest # Auto-generated by build
-├── src/
-│   ├── components/
-│   │   ├── ReloadPrompt.svelte  # PWA Update Toast
-│   │   └── Counter.svelte       # Example Svelte Component
-│   ├── layouts/
-│   │   └── Layout.astro         # Contains <ClientRouter> & PWA Logic
-│   ├── pages/
-│   │   └── index.astro          # Main Entry
-│   └── styles/
-│       └── global.css           # Tailwind @import & DaisyUI @plugin
-├── astro.config.mjs             # Vite PWA & Tailwind Config
-└── package.json
+MIT
