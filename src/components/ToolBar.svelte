@@ -14,11 +14,6 @@
     gameStore.setMode(m)
   }
 
-  function handleSelectAgent(e: Event) {
-    const target = e.target as HTMLSelectElement
-    gameStore.selectAgent(target.value || null)
-  }
-
   function handleClearPortals() {
     gameStore.clearAllPortals()
     showClearPortalsModal = false
@@ -51,29 +46,6 @@
     >
       🗑 Delete
     </button>
-  </div>
-
-  <div class="divider divider-horizontal mx-1"></div>
-
-  <!-- Agent selector (for Link mode) -->
-  <div class="flex items-center gap-1">
-    <span class="text-sm font-medium text-base-content/70">Agent:</span>
-    {#if gameState.agents.length === 0}
-      <span class="text-sm text-base-content/50 italic">No agents</span>
-    {:else}
-      <select
-        class="select select-sm select-bordered w-40"
-        value={gameState.selectedAgentId ?? ''}
-        onchange={handleSelectAgent}
-      >
-        <option value="">-- Select --</option>
-        {#each gameState.agents as agent}
-          <option value={agent.id}>
-            {agent.name} (🔗{agent.linkCount} ⬡{agent.fieldCount} AP:{agent.ap})
-          </option>
-        {/each}
-      </select>
-    {/if}
   </div>
 
   <div class="flex-1"></div>

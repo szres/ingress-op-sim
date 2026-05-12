@@ -159,8 +159,8 @@ function createGameStore() {
   const { subscribe, update, set } = writable<GameState>({
     mode: 'portal',
     portals: [],
-    agents: [],
-    selectedAgentId: null,
+    agents: [{ id: 'agent-default', name: 'Agent01', linkCount: 0, fieldCount: 0, ap: 0 }],
+    selectedAgentId: 'agent-default',
     links: [],
     fields: [],
     pendingLinkPortalId: null,

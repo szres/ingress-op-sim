@@ -51,7 +51,7 @@ Located at the top of the screen:
 | Tool | Icon | Behavior |
 |------|------|----------|
 | **Portal** | 📍 | Click empty canvas → create portal (auto-named P1, P2, ...) |
-| **Link** | 🔗 | 1) Select agent in dropdown → 2) Click portal A → 3) Click portal B → create link |
+| **Link** | 🔗 | 1) Click portal A → 2) Click portal B → create link (uses selected agent) |
 | **Delete** | 🗑 | Click portal → delete portal + all its links/fields; click link → delete single link |
 
 ## Agent Panel
@@ -75,7 +75,7 @@ src/
 ├── stores/
 │   └── gameStore.ts        # Global state (writable store) + all actions
 ├── components/
-│   ├── ToolBar.svelte       # Tool selection + agent dropdown + add agent + clear all
+│   ├── ToolBar.svelte       # Tool selection + clear all
 │   ├── MapCanvas.svelte     # Canvas rendering + mouse event handling
 │   └── AgentPanel.svelte    # Right-side agent list with stats
 └── pages/
@@ -86,7 +86,7 @@ src/
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  [📍 Portal] [🔗 Link] [🗑 Delete] | Agent: [▼Sel]│  ← ToolBar
+│  [📍 Portal] [🔗 Link] [🗑 Delete]          [Clear]│  ← ToolBar
 ├──────────────────────────────┬───────────────────────┤
 │                              │  Agents               │
 │                              │  ┌─ Agent 1 ────────┐ │
