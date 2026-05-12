@@ -8,9 +8,24 @@
   const PORTAL_RADIUS = 12
   const LINK_WIDTH = 2.5
   const FIELD_OPACITY = 0.12
+  const ARROW_SIZE = 8
 
   let mouseX = 0
   let mouseY = 0
+
+  function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, size: number, color: string) {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    ctx.beginPath()
+    ctx.moveTo(size, 0)
+    ctx.lineTo(-size * 0.6, -size * 0.5)
+    ctx.lineTo(-size * 0.6, size * 0.5)
+    ctx.closePath()
+    ctx.fillStyle = color
+    ctx.fill()
+    ctx.restore()
+  }
 
   function render() {
     if (!ctx) return
@@ -60,6 +75,16 @@
       ctx.strokeStyle = color
       ctx.lineWidth = LINK_WIDTH
       ctx.stroke()
+      const dx = p2.x - p1.x
+      const dy = p2.y - p1.y
+      const dist = Math.hypot(dx, dy)
+      const offset = PORTAL_RADIUS * 2
+      if (dist > offset + ARROW_SIZE) {
+        const angle = Math.atan2(dy, dx)
+        const mx = p2.x - (dx / dist) * offset
+        const my = p2.y - (dy / dist) * offset
+        drawArrow(ctx, mx, my, angle, ARROW_SIZE, color)
+      }
     }
 
     // Draw pending link preview (using selected agent's color)
@@ -75,6 +100,16 @@
         ctx.setLineDash([6, 4])
         ctx.stroke()
         ctx.setLineDash([])
+      }
+    }
+
+    // Compute key consumption for selected agent
+    const keyCounts = new Map<string, number>()
+    if (selectedAgentId) {
+      for (const [, targetId, aId] of links) {
+        if (aId === selectedAgentId) {
+          keyCounts.set(targetId, (keyCounts.get(targetId) ?? 0) + 1)
+        }
       }
     }
 
@@ -96,6 +131,22 @@
       ctx.textAlign = 'center'
       ctx.textBaseline = 'bottom'
       ctx.fillText(p.label, p.x, p.y - PORTAL_RADIUS - 4)
+      const kc = keyCounts.get(p.id)
+      if (kc && kc > 0) {
+        ctx.font = 'bold 10px sans-serif'
+        ctx.textBaseline = 'top'
+        const badgeText = `🔑 ${kc}`
+        const badgeW = ctx.measureText(badgeText).width + 8
+        const badgeX = p.x - badgeW / 2
+        const badgeY = p.y + PORTAL_RADIUS + 4
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+        ctx.beginPath()
+        ctx.roundRect(badgeX, badgeY, badgeW, 16, 4)
+        ctx.fill()
+        ctx.fillStyle = '#ffcc00'
+        ctx.textAlign = 'center'
+        ctx.fillText(badgeText, p.x, badgeY + 2)
+      }
     }
 
     // Highlight selected portal in link mode
