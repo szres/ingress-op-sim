@@ -5,17 +5,20 @@ import tailwindcss from '@tailwindcss/vite';
 import AstroPWA from '@vite-pwa/astro';
 
 export default defineConfig({
+  site: 'https://szres.github.io',
+  base: '/ingress-op-sim',
   integrations: [
     svelte(),
     AstroPWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Astro PWA Starter',
-        short_name: 'AstroPWA',
+        name: 'Ingress OP Sim',
+        short_name: 'IngressOP',
         description: 'Astro + Svelte + Tailwind + DaisyUI PWA',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/ingress-op-sim/',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -30,12 +33,12 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/404',
+        navigateFallback: '/ingress-op-sim/404',
         globPatterns: ['**/*.{css,js,html,svg,png,ico,txt}'],
       },
       devOptions: {
         enabled: true,
-        navigateFallbackAllowlist: [/^\/$/],
+        navigateFallbackAllowlist: [/^\/ingress-op-sim\/$/],
       },
     }),
   ],
