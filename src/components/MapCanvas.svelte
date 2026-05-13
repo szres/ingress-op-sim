@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { gameStore, getAgentColor, MIN_PORTAL_DISTANCE } from '../stores/gameStore'
+  import { gameStore, getAgentColor, MIN_PORTAL_DISTANCE, LINK_WARNING_THRESHOLD, MAX_LINKS_PER_PORTAL } from '../stores/gameStore'
 
   let canvasEl: HTMLCanvasElement
   let ctx: CanvasRenderingContext2D | null = null
@@ -190,7 +190,7 @@
     // Draw portal circles
     for (const p of portals) {
       ctx.beginPath()
-      ctx.arc(p.x, p.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
+      ctx.arc(p.x, p.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI  * 2)
       ctx.fillStyle = 'rgba(0, 150, 255, 0.2)'
       ctx.fill()
       ctx.beginPath()
@@ -200,6 +200,27 @@
       ctx.strokeStyle = '#0099ff'
       ctx.lineWidth = 2 * ps
       ctx.stroke()
+    }
+
+    // Compute outbound link counts per portal
+    const outboundCounts = new Map<string, number>()
+    for (const [a, b] of links) {
+      outboundCounts.set(a, (outboundCounts.get(a) ?? 0) + 1)
+      outboundCounts.set(b, (outboundCounts.get(b) ?? 0) + 1)
+    }
+
+    // Draw outbound link count on portal center when > threshold
+    for (const p of portals) {
+      const count = outboundCounts.get(p.id) ?? 0
+      if (count > LINK_WARNING_THRESHOLD) {
+        const isMax = count >= MAX_LINKS_PER_PORTAL
+        const fontSize = Math.round(10 * ps)
+        ctx.font = `bold ${fontSize}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = isMax ? '#ff4444' : '#ffcc00'
+        ctx.fillText(count.toString(), p.x, p.y)
+      }
     }
 
     // Draw key badges (above portal circles)

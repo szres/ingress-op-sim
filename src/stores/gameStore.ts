@@ -40,8 +40,9 @@ export interface ToastMessage {
   type: 'info' | 'warning' | 'error' | 'success'
 }
 
-// Shared agent colors
 export const MIN_PORTAL_DISTANCE = 30
+export const MAX_LINKS_PER_PORTAL = 40
+export const LINK_WARNING_THRESHOLD = 8
 
 export const AGENT_COLORS = [
   '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
@@ -224,6 +225,19 @@ function createGameStore() {
       }
       if (wouldCrossLink(s.portals, s.links, srcId, tgtId)) {
         toastStore.add('Link would cross an existing link!', 'error')
+        return { ...s, pendingLinkPortalId: null }
+      }
+
+      const srcOut = s.links.filter(l => l[0] === srcId || l[1] === srcId).length
+      const tgtOut = s.links.filter(l => l[0] === tgtId || l[1] === tgtId).length
+      if (srcOut >= MAX_LINKS_PER_PORTAL) {
+        const label = s.portalSource === 'imported' ? (s.importedPortalTitles.get(srcId) ?? srcId) : (s.portals.find(p => p.id === srcId)?.label ?? srcId)
+        toastStore.add(`${label} has reached the maximum of ${MAX_LINKS_PER_PORTAL} links!`, 'error')
+        return { ...s, pendingLinkPortalId: null }
+      }
+      if (tgtOut >= MAX_LINKS_PER_PORTAL) {
+        const label = s.portalSource === 'imported' ? (s.importedPortalTitles.get(tgtId) ?? tgtId) : (s.portals.find(p => p.id === tgtId)?.label ?? tgtId)
+        toastStore.add(`${label} has reached the maximum of ${MAX_LINKS_PER_PORTAL} links!`, 'error')
         return { ...s, pendingLinkPortalId: null }
       }
 
