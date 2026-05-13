@@ -9,12 +9,71 @@
   const LINK_WIDTH = 2.5
   const FIELD_OPACITY = 0.12
   const ARROW_SIZE = 8
+  const BBOX_PADDING = 30
 
   let mouseX = 0
   let mouseY = 0
   let mouseInCanvas = false
   let hoveredPortalId: string | null = null
   let cursorForbidden = false
+
+  // Viewport state
+  let panX = 0
+  let panY = 0
+  let scale = 1
+  let isPanning = false
+  let panStartScreenX = 0
+  let panStartScreenY = 0
+  let panStartPanX = 0
+  let panStartPanY = 0
+
+  function clamp(val: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, val))
+  }
+
+  function screenToWorld(sx: number, sy: number): [number, number] {
+    return [sx / scale + panX, sy / scale + panY]
+  }
+
+  function getPortalsBBox(portals: Array<{ x: number; y: number }>): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    if (portals.length === 0) return null
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const p of portals) {
+      if (p.x < minX) minX = p.x
+      if (p.y < minY) minY = p.y
+      if (p.x > maxX) maxX = p.x
+      if (p.y > maxY) maxY = p.y
+    }
+    const pad = PORTAL_RADIUS + BBOX_PADDING
+    return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad }
+  }
+
+  function clampPan() {
+    const state = gameStore.getState()
+    const bbox = getPortalsBBox(state.portals)
+    if (!bbox) {
+      panX = 0
+      panY = 0
+      return
+    }
+    const rect = canvasEl.getBoundingClientRect()
+    const viewW = rect.width / scale
+    const viewH = rect.height / scale
+    const bboxW = bbox.maxX - bbox.minX
+    const bboxH = bbox.maxY - bbox.minY
+
+    if (viewW >= bboxW) {
+      panX = clamp(panX, bbox.maxX - viewW, bbox.minX)
+    } else {
+      panX = clamp(panX, bbox.minX, bbox.maxX - viewW)
+    }
+
+    if (viewH >= bboxH) {
+      panY = clamp(panY, bbox.maxY - viewH, bbox.minY)
+    } else {
+      panY = clamp(panY, bbox.minY, bbox.maxY - viewH)
+    }
+  }
 
   function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, size: number, color: string) {
     ctx.save()
@@ -46,6 +105,9 @@
     }
 
     ctx.clearRect(0, 0, w, h)
+
+    // Apply viewport transform
+    ctx.setTransform(scale, 0, 0, scale, -panX * scale, -panY * scale)
 
     // Draw fields
     for (const f of fields) {
@@ -91,7 +153,7 @@
     }
 
     // Draw pending link preview (using selected agent's color)
-    if (mode === 'link' && pendingLinkPortalId && mouseX > 0 && mouseY > 0) {
+    if (mode === 'link' && pendingLinkPortalId && mouseInCanvas) {
       const src = portals.find(p => p.id === pendingLinkPortalId)
       if (src) {
         const color = selectedAgentId ? getAgentColor(selectedAgentId, agents) : '#ff6600'
@@ -202,7 +264,7 @@
     }
 
     // Ghost portal cursor in portal mode
-    if (mode === 'portal' && mouseInCanvas && mouseX > 0 && mouseY > 0) {
+    if (mode === 'portal' && mouseInCanvas) {
       const nearestDist = portals.reduce((min, p) => Math.min(min, Math.hypot(mouseX - p.x, mouseY - p.y)), Infinity)
       const tooClose = nearestDist < MIN_PORTAL_DISTANCE
       const fillColor = tooClose ? 'rgba(255, 50, 50, 0.4)' : 'rgba(0, 102, 204, 0.3)'
@@ -232,19 +294,34 @@
         ctx.stroke()
       }
     }
+
+    // Reset transform
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
   }
 
   function handleClick(e: MouseEvent) {
+    if (isPanning) return
     const rect = canvasEl.getBoundingClientRect()
-    const cx = e.clientX - rect.left
-    const cy = e.clientY - rect.top
-    gameStore.handleCanvasClick(cx, cy)
+    const [wx, wy] = screenToWorld(e.clientX - rect.left, e.clientY - rect.top)
+    gameStore.handleCanvasClick(wx, wy)
   }
 
   function handleMouseMove(e: MouseEvent) {
     const rect = canvasEl.getBoundingClientRect()
-    mouseX = e.clientX - rect.left
-    mouseY = e.clientY - rect.top
+    const sx = e.clientX - rect.left
+    const sy = e.clientY - rect.top
+
+    if (isPanning) {
+      panX = panStartPanX - (e.clientX - panStartScreenX) / scale
+      panY = panStartPanY - (e.clientY - panStartScreenY) / scale
+      clampPan()
+      render()
+      return
+    }
+
+    const [wx, wy] = screenToWorld(sx, sy)
+    mouseX = wx
+    mouseY = wy
     mouseInCanvas = true
     const state = gameStore.getState()
     if (state.mode === 'link' || state.mode === 'delete') {
@@ -263,6 +340,41 @@
     render()
   }
 
+  function handleMouseDown(e: MouseEvent) {
+    if (e.button === 1) {
+      isPanning = true
+      panStartScreenX = e.clientX
+      panStartScreenY = e.clientY
+      panStartPanX = panX
+      panStartPanY = panY
+      e.preventDefault()
+    }
+  }
+
+  function handleMouseUp(e: MouseEvent) {
+    if (e.button === 1 && isPanning) {
+      isPanning = false
+      render()
+    }
+  }
+
+  function handleWheel(e: WheelEvent) {
+    e.preventDefault()
+    const rect = canvasEl.getBoundingClientRect()
+    const screenX = e.clientX - rect.left
+    const screenY = e.clientY - rect.top
+    const [worldX, worldY] = screenToWorld(screenX, screenY)
+
+    const oldScale = scale
+    scale = clamp(scale * (1 - e.deltaY * 0.001), 0.5, 1.0)
+    if (scale === oldScale) return
+
+    panX = worldX - screenX / scale
+    panY = worldY - screenY / scale
+    clampPan()
+    render()
+  }
+
   function resizeCanvas() {
     if (!canvasEl) return false
     const rect = canvasEl.getBoundingClientRect()
@@ -270,6 +382,41 @@
     canvasEl.width = rect.width
     canvasEl.height = rect.height
     return true
+  }
+
+  function fitView() {
+    const state = gameStore.getState()
+    const bbox = getPortalsBBox(state.portals)
+    if (!bbox) {
+      panX = 0
+      panY = 0
+      scale = 1
+      return
+    }
+    const rect = canvasEl.getBoundingClientRect()
+    const bboxW = bbox.maxX - bbox.minX
+    const bboxH = bbox.maxY - bbox.minY
+    if (bboxW <= 0 || bboxH <= 0) return
+    const idealScale = clamp(Math.min(rect.width / bboxW, rect.height / bboxH), 0.5, 1.0)
+    // Record old scale to know if we changed it
+    const oldScale = scale
+    if (idealScale < scale) {
+      scale = idealScale
+    }
+    // Adjust pan to keep the current viewport center stable after scale change
+    if (scale !== oldScale) {
+      const cx = panX + (rect.width / oldScale) / 2
+      const cy = panY + (rect.height / oldScale) / 2
+      panX = cx - (rect.width / scale) / 2
+      panY = cy - (rect.height / scale) / 2
+    }
+    clampPan()
+  }
+
+  function handleResize() {
+    resizeCanvas()
+    fitView()
+    render()
   }
 
   onMount(() => {
@@ -289,17 +436,38 @@
     }
     tryResize()
 
-    window.addEventListener('resize', () => {
-      resizeCanvas()
-      render()
-    })
+    window.addEventListener('resize', handleResize)
 
-    const unsub = gameStore.subscribe(() => {
+    // Global mouseup to catch middle-button release outside canvas
+    const globalMouseUp = (e: MouseEvent) => {
+      if (e.button === 1 && isPanning) {
+        isPanning = false
+        render()
+      }
+    }
+    window.addEventListener('mouseup', globalMouseUp)
+
+    // Wheel handler with passive: false to allow preventDefault
+    const wheelHandler = (e: WheelEvent) => {
+      if (e.target === canvasEl || canvasEl.contains(e.target as Node)) {
+        handleWheel(e)
+      }
+    }
+    canvasEl.addEventListener('wheel', wheelHandler, { passive: false })
+
+    const unsub = gameStore.subscribe((state) => {
+      if (state.portals.length === 0) {
+        panX = 0
+        panY = 0
+        scale = 1
+      }
       render()
     })
 
     return () => {
-      window.removeEventListener('resize', () => {})
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('mouseup', globalMouseUp)
+      canvasEl.removeEventListener('wheel', wheelHandler)
       unsub()
     }
   })
@@ -308,8 +476,10 @@
 <canvas
   bind:this={canvasEl}
   class="w-full h-full"
-  style="min-width: 200px; min-height: 200px; background: #1a1a2e; display: block; cursor: {cursorForbidden ? 'not-allowed' : 'default'};"
+  style="min-width: 200px; min-height: 200px; background: #1a1a2e; display: block; cursor: {isPanning ? 'grabbing' : cursorForbidden ? 'not-allowed' : 'default'};"
   onclick={handleClick}
   onmousemove={handleMouseMove}
   onmouseleave={handleMouseLeave}
+  onmousedown={handleMouseDown}
+  onmouseup={handleMouseUp}
 ></canvas>
