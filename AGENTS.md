@@ -41,6 +41,8 @@ interface GameState {
   links: Link[]
   fields: Field[]
   pendingLinkPortalId: string | null  // first portal clicked in link mode
+  portalSource: 'manual' | 'imported'  // how portals were created
+  importedPortalTitles: Map<string, string>  // portal id → IITC title (imported only)
 }
 ```
 
@@ -50,9 +52,10 @@ Located at the top of the screen:
 
 | Tool | Icon | Behavior |
 |------|------|----------|
-| **Portal** | 📍 | Click empty canvas → create portal (auto-named P1, P2, ...) |
+| **Portal** | 📍 | Click empty canvas → create portal (auto-named P1, P2, ...). Disabled when portals are imported. |
 | **Link** | 🔗 | 1) Click portal A → 2) Click portal B → create link (uses selected agent) |
 | **Delete** | 🗑 | Click portal → delete portal + all its links/fields; click link → delete single link |
+| **Import IITC** | 📥 | Import portals from IITC JSON export. Clears existing data. Switches to link mode. |
 
 ## Agent Panel
 
@@ -115,6 +118,9 @@ src/
 | `deletePortal(id)` | Remove portal + cascade delete |
 | `deleteLink(index)` | Remove single link + dependent fields |
 | `clearAll()` | Reset everything, agent stats to 0 |
+| `importIITCPortals(json)` | Import portals from IITC JSON, clear existing data, switch to link mode |
+| `getImportedTitle(portalId)` | Returns IITC title for imported portal, or null |
+| `findNearbyPortals(x, y, portals, radius)` | Find all portals within larger radius (90px) for hover label display |
 
 ## Field Detection (detectNewFields)
 
@@ -122,6 +128,14 @@ After each new link A-B by agent X:
 1. Find all portals C connected to both A and B via existing links
 2. For each C, check if A-C and B-C links exist
 3. If triangle A-B-C is not already recorded, add new Field
+
+## IITC Portal Import
+
+- **Mutual exclusivity**: Imported and manual portals cannot coexist. Importing clears all existing portals, links, fields, and resets agent stats.
+- **Coordinate projection**: Lat/lng → canvas coordinates via linear bounding-box mapping with Y-axis flip. Works with any IITC export regardless of geographic area.
+- **Hover labels**: Imported portal labels are hidden by default and shown only when mouse is within ~90px (larger than the 16px click radius).
+- **Portal tool disabled**: When portals are imported, the Portal creation tool is disabled and an "Imported" badge is shown in the toolbar.
+- **IITC JSON format**: Expects an array of objects with `{ guid, title, coordinates: { lat, lng }, link, image }`.
 
 ## Modification Rules
 

@@ -15,6 +15,7 @@
   let mouseY = 0
   let mouseInCanvas = false
   let hoveredPortalId: string | null = null
+  let nearbyPortalIds: Set<string> = new Set()
   let cursorForbidden = false
 
   // Viewport state
@@ -183,39 +184,60 @@
       }
     }
 
-    // Draw portals
+    // When zoomed past 100%, scale down portal visual sizes to keep them constant on screen
+    const ps = scale > 1.0 ? 1.0 / scale : 1.0
+
+    // Draw portal circles
     for (const p of portals) {
       ctx.beginPath()
-      ctx.arc(p.x, p.y, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+      ctx.arc(p.x, p.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
       ctx.fillStyle = 'rgba(0, 150, 255, 0.2)'
       ctx.fill()
       ctx.beginPath()
-      ctx.arc(p.x, p.y, PORTAL_RADIUS, 0, Math.PI * 2)
+      ctx.arc(p.x, p.y, PORTAL_RADIUS * ps, 0, Math.PI * 2)
       ctx.fillStyle = '#0066cc'
       ctx.fill()
       ctx.strokeStyle = '#0099ff'
-      ctx.lineWidth = 2
+      ctx.lineWidth = 2 * ps
       ctx.stroke()
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 11px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'bottom'
-      ctx.fillText(p.label, p.x, p.y - PORTAL_RADIUS - 4)
+    }
+
+    // Draw key badges (above portal circles)
+    for (const p of portals) {
       const kc = keyCounts.get(p.id)
       if (kc && kc > 0) {
-        ctx.font = 'bold 10px sans-serif'
+        ctx.font = `bold ${Math.round(10 * ps)}px sans-serif`
         ctx.textBaseline = 'top'
         const badgeText = `🔑 ${kc}`
-        const badgeW = ctx.measureText(badgeText).width + 8
+        const badgeW = ctx.measureText(badgeText).width + 8 * ps
         const badgeX = p.x - badgeW / 2
-        const badgeY = p.y + PORTAL_RADIUS + 4
+        const badgeY = p.y + (PORTAL_RADIUS + 4) * ps
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
         ctx.beginPath()
-        ctx.roundRect(badgeX, badgeY, badgeW, 16, 4)
+        ctx.roundRect(badgeX, badgeY, badgeW, 16 * ps, 4 * ps)
         ctx.fill()
         ctx.fillStyle = '#ffcc00'
         ctx.textAlign = 'center'
-        ctx.fillText(badgeText, p.x, badgeY + 2)
+        ctx.fillText(badgeText, p.x, badgeY + 2 * ps)
+      }
+    }
+
+    // Draw portal labels (topmost z-index)
+    for (const p of portals) {
+      const showLabel = state.portalSource === 'imported'
+        ? (nearbyPortalIds.has(p.id) || p.id === pendingLinkPortalId)
+        : true
+      if (showLabel) {
+        const labelText = state.portalSource === 'imported'
+          ? (state.importedPortalTitles.get(p.id) ?? '')
+          : p.label
+        if (labelText) {
+          ctx.fillStyle = '#ffffff'
+          ctx.font = `bold ${Math.round(11 * ps)}px sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.fillText(labelText, p.x, p.y - (PORTAL_RADIUS + 4) * ps)
+        }
       }
     }
 
@@ -224,9 +246,9 @@
       const sp = portals.find(p => p.id === pendingLinkPortalId)
       if (sp) {
         ctx.beginPath()
-        ctx.arc(sp.x, sp.y, PORTAL_RADIUS + 5, 0, Math.PI * 2)
+        ctx.arc(sp.x, sp.y, (PORTAL_RADIUS + 5) * ps, 0, Math.PI * 2)
         ctx.strokeStyle = '#ff6600'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 2 * ps
         ctx.stroke()
       }
     }
@@ -236,12 +258,12 @@
       const hp = portals.find(p => p.id === hoveredPortalId)
       if (hp && hoveredPortalId !== pendingLinkPortalId) {
         ctx.beginPath()
-        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 6, 0, Math.PI * 2)
+        ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 6) * ps, 0, Math.PI * 2)
         ctx.strokeStyle = '#00ff88'
-        ctx.lineWidth = 2.5
+        ctx.lineWidth = 2.5 * ps
         ctx.stroke()
         ctx.beginPath()
-        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+        ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
         ctx.fillStyle = 'rgba(0, 255, 136, 0.15)'
         ctx.fill()
       }
@@ -252,12 +274,12 @@
       const hp = portals.find(p => p.id === hoveredPortalId)
       if (hp) {
         ctx.beginPath()
-        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 6, 0, Math.PI * 2)
+        ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 6) * ps, 0, Math.PI * 2)
         ctx.strokeStyle = '#ff4444'
-        ctx.lineWidth = 2.5
+        ctx.lineWidth = 2.5 * ps
         ctx.stroke()
         ctx.beginPath()
-        ctx.arc(hp.x, hp.y, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+        ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
         ctx.fillStyle = 'rgba(255, 68, 68, 0.15)'
         ctx.fill()
       }
@@ -271,21 +293,21 @@
       const strokeColor = tooClose ? '#ff3333' : 'rgba(0, 153, 255, 0.5)'
 
       ctx.beginPath()
-      ctx.arc(mouseX, mouseY, PORTAL_RADIUS + 3, 0, Math.PI * 2)
+      ctx.arc(mouseX, mouseY, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
       ctx.fillStyle = tooClose ? 'rgba(255, 50, 50, 0.15)' : 'rgba(0, 150, 255, 0.1)'
       ctx.fill()
       ctx.beginPath()
-      ctx.arc(mouseX, mouseY, PORTAL_RADIUS, 0, Math.PI * 2)
+      ctx.arc(mouseX, mouseY, PORTAL_RADIUS * ps, 0, Math.PI * 2)
       ctx.fillStyle = fillColor
       ctx.fill()
       ctx.strokeStyle = strokeColor
-      ctx.lineWidth = 2
+      ctx.lineWidth = 2 * ps
       ctx.stroke()
 
       if (tooClose) {
         ctx.strokeStyle = '#ff3333'
-        ctx.lineWidth = 2.5
-        const s = 5
+        ctx.lineWidth = 2.5 * ps
+        const s = 5 * ps
         ctx.beginPath()
         ctx.moveTo(mouseX - s, mouseY - s)
         ctx.lineTo(mouseX + s, mouseY + s)
@@ -329,13 +351,15 @@
     } else {
       hoveredPortalId = null
     }
-    cursorForbidden = state.mode === 'portal' && state.portals.some(p => Math.hypot(mouseX - p.x, mouseY - p.y) < MIN_PORTAL_DISTANCE)
+    nearbyPortalIds = gameStore.findNearbyPortals(mouseX, mouseY, state.portals)
+    cursorForbidden = state.mode === 'portal' && (state.portalSource === 'imported' || state.portals.some(p => Math.hypot(mouseX - p.x, mouseY - p.y) < MIN_PORTAL_DISTANCE))
     render()
   }
 
   function handleMouseLeave() {
     mouseInCanvas = false
     hoveredPortalId = null
+    nearbyPortalIds = new Set()
     cursorForbidden = false
     render()
   }
@@ -366,7 +390,7 @@
     const [worldX, worldY] = screenToWorld(screenX, screenY)
 
     const oldScale = scale
-    scale = clamp(scale * (1 - e.deltaY * 0.001), 0.5, 1.0)
+    scale = clamp(scale * (1 - e.deltaY * 0.001), 0.5, 1.5)
     if (scale === oldScale) return
 
     panX = worldX - screenX / scale
@@ -397,7 +421,7 @@
     const bboxW = bbox.maxX - bbox.minX
     const bboxH = bbox.maxY - bbox.minY
     if (bboxW <= 0 || bboxH <= 0) return
-    const idealScale = clamp(Math.min(rect.width / bboxW, rect.height / bboxH), 0.5, 1.0)
+    const idealScale = clamp(Math.min(rect.width / bboxW, rect.height / bboxH), 0.5, 1.5)
     // Record old scale to know if we changed it
     const oldScale = scale
     if (idealScale < scale) {
@@ -460,6 +484,8 @@
         panX = 0
         panY = 0
         scale = 1
+      } else if (state.portalSource === 'imported') {
+        fitView()
       }
       render()
     })

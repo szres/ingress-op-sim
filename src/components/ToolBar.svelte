@@ -1,10 +1,11 @@
 <script lang="ts">
   import { get } from 'svelte/store'
-  import { gameStore, type ToolMode } from '../stores/gameStore'
+  import { gameStore, toastStore, type ToolMode } from '../stores/gameStore'
 
   let gameState = $state(get(gameStore))
   let showClearPortalsModal = $state(false)
   let showClearLinksModal = $state(false)
+  let fileInput: HTMLInputElement
 
   gameStore.subscribe(s => {
     gameState = s
@@ -23,14 +24,37 @@
     gameStore.clearAllLinks()
     showClearLinksModal = false
   }
+
+  function handleImportClick() {
+    fileInput?.click()
+  }
+
+  function handleFileChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+    const MAX_SIZE = 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      toastStore.add(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 1MB.`, 'error')
+      input.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      gameStore.importIITCPortals(reader.result as string)
+    }
+    reader.readAsText(file)
+    input.value = ''
+  }
 </script>
 
 <div class="flex items-center gap-2 p-2 bg-base-100 border-b border-base-300 flex-wrap">
   <!-- Tool buttons -->
   <div class="btn-group btn-group-sm">
     <button
-      class="btn btn-sm {gameState.mode === 'portal' ? 'btn-primary' : 'btn-ghost'}"
+      class="btn btn-sm {gameState.mode === 'portal' ? 'btn-primary' : 'btn-ghost'} {gameState.portalSource === 'imported' ? 'btn-disabled' : ''}"
       onclick={() => handleSetMode('portal')}
+      disabled={gameState.portalSource === 'imported'}
     >
       📍 Portal
     </button>
@@ -48,7 +72,23 @@
     </button>
   </div>
 
+  {#if gameState.portalSource === 'imported'}
+    <span class="badge badge-sm badge-info">Imported</span>
+  {/if}
+
   <div class="flex-1"></div>
+
+  <!-- Import button -->
+  <input
+    bind:this={fileInput}
+    type="file"
+    accept=".json"
+    class="hidden"
+    onchange={handleFileChange}
+  />
+  <button class="btn btn-sm btn-accent btn-outline" onclick={handleImportClick}>
+    📥 Import IITC
+  </button>
 
   <!-- Clear buttons -->
   {#if gameState.links.length > 0 || gameState.fields.length > 0}

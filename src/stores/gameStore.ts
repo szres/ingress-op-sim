@@ -30,6 +30,8 @@ export interface GameState {
   links: Link[]
   fields: Field[]
   pendingLinkPortalId: string | null
+  portalSource: 'manual' | 'imported'
+  importedPortalTitles: Map<string, string>
 }
 
 export interface ToastMessage {
@@ -164,6 +166,8 @@ function createGameStore() {
     links: [],
     fields: [],
     pendingLinkPortalId: null,
+    portalSource: 'manual',
+    importedPortalTitles: new Map(),
   })
 
   const selectedAgent = derived({ subscribe }, $state => {
@@ -335,6 +339,10 @@ function createGameStore() {
     const state = get({ subscribe })
     switch (state.mode) {
       case 'portal': {
+        if (state.portalSource === 'imported') {
+          toastStore.add('Cannot add portals when using imported data', 'warning')
+          return
+        }
         const tooClose = state.portals.some(p => Math.hypot(cx - p.x, cy - p.y) < MIN_PORTAL_DISTANCE)
         if (tooClose) {
           toastStore.add('Too close to an existing portal!', 'error')
@@ -369,6 +377,8 @@ function createGameStore() {
       links: [],
       fields: [],
       pendingLinkPortalId: null,
+      portalSource: 'manual',
+      importedPortalTitles: new Map(),
       agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0 })),
     }))
   }
@@ -383,6 +393,87 @@ function createGameStore() {
     }))
   }
 
+  const CANVAS_WIDTH = 1200
+  const CANVAS_HEIGHT = 900
+  const BBOX_PADDING = 50
+
+  function importIITCPortals(portalsJson: string) {
+    let parsed: Array<{ guid?: string; title?: string; coordinates?: { lat?: string; lng?: string } }>
+    try {
+      parsed = JSON.parse(portalsJson)
+    } catch {
+      toastStore.add('Invalid JSON file', 'error')
+      return
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      toastStore.add('JSON file contains no portals', 'error')
+      return
+    }
+    const valid = parsed.filter(
+      p => p.coordinates && p.coordinates.lat && p.coordinates.lng
+    )
+    if (valid.length === 0) {
+      toastStore.add('No valid portal coordinates found in JSON', 'error')
+      return
+    }
+
+    const MAX_PORTALS = 1024
+    if (valid.length > MAX_PORTALS) {
+      toastStore.add(`Only first ${MAX_PORTALS} portals imported (total: ${valid.length})`, 'warning')
+      valid.length = MAX_PORTALS
+    }
+
+    const lats = valid.map(p => parseFloat(p.coordinates!.lat!))
+    const lngs = valid.map(p => parseFloat(p.coordinates!.lng!))
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+    const latRange = maxLat - minLat || 0.001
+    const lngRange = maxLng - minLng || 0.001
+
+    const titles = new Map<string, string>()
+    const portals: Portal[] = valid.map((p, i) => {
+      const id = `imported-${Date.now()}-${i}`
+      const lat = parseFloat(p.coordinates!.lat!)
+      const lng = parseFloat(p.coordinates!.lng!)
+      const x = BBOX_PADDING + ((lng - minLng) / lngRange) * (CANVAS_WIDTH - 2 * BBOX_PADDING)
+      const y = BBOX_PADDING + ((maxLat - lat) / latRange) * (CANVAS_HEIGHT - 2 * BBOX_PADDING)
+      const title = p.title || `Portal ${i + 1}`
+      titles.set(id, title)
+      return { id, x, y, label: '' }
+    })
+
+    update(s => ({
+      ...s,
+      portals,
+      links: [],
+      fields: [],
+      pendingLinkPortalId: null,
+      portalSource: 'imported',
+      importedPortalTitles: titles,
+      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0 })),
+      mode: 'link',
+    }))
+
+    toastStore.add(`Imported ${portals.length} portals`, 'success')
+  }
+
+  function getImportedTitle(portalId: string): string | null {
+    const state = get({ subscribe })
+    return state.importedPortalTitles.get(portalId) ?? null
+  }
+
+  function findNearbyPortals(cx: number, cy: number, portals: Portal[], radius = 90): Set<string> {
+    const result = new Set<string>()
+    for (const p of portals) {
+      const dx = cx - p.x
+      const dy = cy - p.y
+      if (dx * dx + dy * dy <= radius * radius) result.add(p.id)
+    }
+    return result
+  }
+
   function getState(): GameState {
     return get({ subscribe })
   }
@@ -392,8 +483,9 @@ function createGameStore() {
     setMode, addAgent, selectAgent, addPortal,
     handleLinkClick, handleCanvasClick,
     deletePortal, deleteLink,
-    findPortalAt, findLinkAt,
+    findPortalAt, findLinkAt, findNearbyPortals,
     clearAllPortals, clearAllLinks,
+    importIITCPortals, getImportedTitle,
   }
 }
 
