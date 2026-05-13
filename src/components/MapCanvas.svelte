@@ -479,14 +479,17 @@
     }
     canvasEl.addEventListener('wheel', wheelHandler, { passive: false })
 
+    let prevPortalsRef: Array<{ id: string; x: number; y: number; label: string }> | null = null
     const unsub = gameStore.subscribe((state) => {
       if (state.portals.length === 0) {
         panX = 0
         panY = 0
         scale = 1
-      } else if (state.portalSource === 'imported') {
+        prevPortalsRef = null
+      } else if (state.portalSource === 'imported' && state.portals !== prevPortalsRef) {
         fitView()
       }
+      prevPortalsRef = state.portals
       render()
     })
 
