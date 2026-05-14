@@ -29,7 +29,10 @@
   <!-- Global stats -->
   <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-base-300 bg-base-200/50">
     <div class="flex gap-4 text-sm">
-      <span class="text-info font-medium">📍 {totalPortals}</span>
+      <span class="text-info font-medium inline-flex items-center gap-0.5">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>
+        {totalPortals}
+      </span>
       <span class="text-success font-medium inline-flex items-center gap-0.5">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5" cy="19" r="2.5" fill="currentColor"/><circle cx="19" cy="5" r="2.5" fill="currentColor"/></svg>
         {totalLinks}
@@ -39,14 +42,6 @@
         {totalFields}
       </span>
     </div>
-    <button
-      class="btn btn-circle btn-ghost btn-sm"
-      disabled={agents.length >= 16}
-      onclick={handleAdd}
-      title="Add Agent"
-    >
-      <span class="text-lg font-bold">+</span>
-    </button>
   </div>
 
   <!-- Agent list -->
@@ -54,7 +49,7 @@
     {#if agents.length === 0}
       <div class="text-center text-base-content/40 text-sm py-8">
         No agents yet.<br />
-        Click "+" to add one.
+        Click below to add one.
       </div>
     {:else}
       {#each agents as agent (agent.id)}
@@ -94,5 +89,14 @@
         </div>
       {/each}
     {/if}
+    <button
+      class="btn btn-outline btn-primary btn-sm w-full gap-1"
+      disabled={agents.length >= 16}
+      onclick={handleAdd}
+      title="Add Agent"
+    >
+      <span class="text-base font-bold leading-none">+</span>
+      <span>Add Agent</span>
+    </button>
   </div>
 </div>

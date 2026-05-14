@@ -409,12 +409,18 @@ function createGameStore() {
   }
 
   function findPortalAt(cx: number, cy: number, portals: Portal[], radius = 16): string | null {
+    let best: string | null = null
+    let bestDistSq = radius * radius
     for (const p of portals) {
       const dx = cx - p.x
       const dy = cy - p.y
-      if (dx * dx + dy * dy <= radius * radius) return p.id
+      const distSq = dx * dx + dy * dy
+      if (distSq <= bestDistSq) {
+        bestDistSq = distSq
+        best = p.id
+      }
     }
-    return null
+    return best
   }
 
   function handleCanvasClick(cx: number, cy: number) {

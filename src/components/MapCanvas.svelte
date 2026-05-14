@@ -187,17 +187,18 @@
     // When zoomed past 100%, scale down portal visual sizes to keep them constant on screen
     const ps = scale > 1.0 ? 1.0 / scale : 1.0
 
-    // Draw portal circles
+    // Draw portal circles (skip hovered portal — drawn last on top)
     for (const p of portals) {
+      if (p.id === hoveredPortalId) continue
       ctx.beginPath()
       ctx.arc(p.x, p.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI  * 2)
-      ctx.fillStyle = 'rgba(0, 150, 255, 0.2)'
+      ctx.fillStyle = 'rgba(0, 200, 200, 0.2)'
       ctx.fill()
       ctx.beginPath()
       ctx.arc(p.x, p.y, PORTAL_RADIUS * ps, 0, Math.PI * 2)
-      ctx.fillStyle = '#0066cc'
+      ctx.fillStyle = '#009999'
       ctx.fill()
-      ctx.strokeStyle = '#0099ff'
+      ctx.strokeStyle = '#00cccc'
       ctx.lineWidth = 2 * ps
       ctx.stroke()
     }
@@ -243,8 +244,9 @@
       }
     }
 
-    // Draw portal labels (topmost z-index)
+    // Draw portal labels (skip hovered portal — drawn last on top)
     for (const p of portals) {
+      if (p.id === hoveredPortalId) continue
       const showLabel = state.portalSource === 'imported'
         ? (nearbyPortalIds.has(p.id) || p.id === pendingLinkPortalId)
         : true
@@ -306,16 +308,92 @@
       }
     }
 
+    // Draw hovered portal on top (circle + emphasized label with background)
+    if (hoveredPortalId) {
+      const hp = portals.find(p => p.id === hoveredPortalId)
+      if (hp) {
+        // Portal circle
+        ctx.beginPath()
+        ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(0, 200, 200, 0.2)'
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(hp.x, hp.y, PORTAL_RADIUS * ps, 0, Math.PI * 2)
+        ctx.fillStyle = '#009999'
+        ctx.fill()
+        ctx.strokeStyle = '#00cccc'
+        ctx.lineWidth = 2 * ps
+        ctx.stroke()
+
+        // Emphasized label with background
+        const labelText = state.portalSource === 'imported'
+          ? (state.importedPortalTitles.get(hp.id) ?? hp.label)
+          : hp.label
+        if (labelText) {
+          const fontSize = Math.round(15 * ps)
+          ctx.font = `bold ${fontSize}px sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          const textW = ctx.measureText(labelText).width
+          const padX = 8 * ps
+          const padY = 4 * ps
+          const bgX = hp.x - textW / 2 - padX
+          const bgY = hp.y - (PORTAL_RADIUS + 4) * ps - fontSize - padY
+          const bgW = textW + padX * 2
+          const bgH = fontSize + padY * 2
+          ctx.fillStyle = '#ff8800'
+          ctx.beginPath()
+          ctx.roundRect(bgX, bgY, bgW, bgH, 4 * ps)
+          ctx.fill()
+          ctx.strokeStyle = '#000000'
+          ctx.lineWidth = 1.5 * ps
+          ctx.stroke()
+          ctx.fillStyle = '#000000'
+          ctx.fillText(labelText, hp.x, hp.y - (PORTAL_RADIUS + 4) * ps)
+        }
+
+        // Key badge for hovered portal
+        const kc = keyCounts.get(hp.id)
+        if (kc && kc > 0) {
+          ctx.font = `bold ${Math.round(10 * ps)}px sans-serif`
+          ctx.textBaseline = 'top'
+          const badgeText = `🔑 ${kc}`
+          const badgeW = ctx.measureText(badgeText).width + 8 * ps
+          const badgeX = hp.x - badgeW / 2
+          const badgeY = hp.y + (PORTAL_RADIUS + 4) * ps
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+          ctx.beginPath()
+          ctx.roundRect(badgeX, badgeY, badgeW, 16 * ps, 4 * ps)
+          ctx.fill()
+          ctx.fillStyle = '#ffcc00'
+          ctx.textAlign = 'center'
+          ctx.fillText(badgeText, hp.x, badgeY + 2 * ps)
+        }
+
+        // Outbound link count for hovered portal
+        const count = outboundCounts.get(hp.id) ?? 0
+        if (count > LINK_WARNING_THRESHOLD) {
+          const isMax = count >= MAX_LINKS_PER_PORTAL
+          const fontSize = Math.round(10 * ps)
+          ctx.font = `bold ${fontSize}px sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillStyle = isMax ? '#ff4444' : '#ffcc00'
+          ctx.fillText(count.toString(), hp.x, hp.y)
+        }
+      }
+    }
+
     // Ghost portal cursor in portal mode
     if (mode === 'portal' && mouseInCanvas) {
       const nearestDist = portals.reduce((min, p) => Math.min(min, Math.hypot(mouseX - p.x, mouseY - p.y)), Infinity)
       const tooClose = nearestDist < MIN_PORTAL_DISTANCE
-      const fillColor = tooClose ? 'rgba(255, 50, 50, 0.4)' : 'rgba(0, 102, 204, 0.3)'
-      const strokeColor = tooClose ? '#ff3333' : 'rgba(0, 153, 255, 0.5)'
+      const fillColor = tooClose ? 'rgba(255, 50, 50, 0.4)' : 'rgba(0, 153, 153, 0.3)'
+      const strokeColor = tooClose ? '#ff3333' : 'rgba(0, 204, 204, 0.5)'
 
       ctx.beginPath()
       ctx.arc(mouseX, mouseY, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
-      ctx.fillStyle = tooClose ? 'rgba(255, 50, 50, 0.15)' : 'rgba(0, 150, 255, 0.1)'
+      ctx.fillStyle = tooClose ? 'rgba(255, 50, 50, 0.15)' : 'rgba(0, 200, 200, 0.1)'
       ctx.fill()
       ctx.beginPath()
       ctx.arc(mouseX, mouseY, PORTAL_RADIUS * ps, 0, Math.PI * 2)
@@ -411,7 +489,7 @@
     const [worldX, worldY] = screenToWorld(screenX, screenY)
 
     const oldScale = scale
-    scale = clamp(scale * (1 - e.deltaY * 0.001), 0.5, 1.5)
+    scale = clamp(scale * (1 - e.deltaY * 0.001), 0.5, 2.0)
     if (scale === oldScale) return
 
     panX = worldX - screenX / scale
@@ -442,7 +520,7 @@
     const bboxW = bbox.maxX - bbox.minX
     const bboxH = bbox.maxY - bbox.minY
     if (bboxW <= 0 || bboxH <= 0) return
-    const idealScale = clamp(Math.min(rect.width / bboxW, rect.height / bboxH), 0.5, 1.5)
+    const idealScale = clamp(Math.min(rect.width / bboxW, rect.height / bboxH), 0.5, 2.0)
     // Record old scale to know if we changed it
     const oldScale = scale
     if (idealScale < scale) {
