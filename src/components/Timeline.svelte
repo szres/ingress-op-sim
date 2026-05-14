@@ -1,14 +1,19 @@
 <script lang="ts">
-  import { gameStore, getAgentColor, type TimelineEntry, type Agent } from '../stores/gameStore'
+  import { gameStore, getAgentColor, type TimelineEntry, type Agent, type Portal } from '../stores/gameStore'
+  import { exportTimelineGif } from '../utils/exportRender'
 
   let entries: TimelineEntry[] = $state([])
   let timelineStep = $state(0)
   let isPlaying = $state(false)
   let playSpeed = $state(1000)
   let agents: Agent[] = $state([])
+  let portals: Portal[] = $state([])
+  let importedPortalTitles: Map<string, string> = $state(new Map())
 
   let trackEl: HTMLDivElement | null = $state(null)
   let isDragging = $state(false)
+  let isExporting = $state(false)
+  let exportProgress = $state(0)
 
   gameStore.subscribe(s => {
     entries = s.timelineEntries
@@ -16,6 +21,8 @@
     isPlaying = s.isPlaying
     playSpeed = s.playSpeed
     agents = s.agents
+    portals = s.portals
+    importedPortalTitles = s.importedPortalTitles
   })
 
   const speedOptions = [
@@ -47,6 +54,29 @@
   function handleSpeedChange(e: Event) {
     const val = Number((e.target as HTMLSelectElement).value)
     gameStore.setPlaySpeed(val)
+  }
+
+  async function handleExport() {
+    if (isExporting || entries.length === 0) return
+    gameStore.pauseTimeline()
+    isExporting = true
+    exportProgress = 0
+    try {
+      const blob = await exportTimelineGif(entries, portals, agents, importedPortalTitles, playSpeed, (step, total) => {
+        exportProgress = total > 0 ? Math.round((step / total) * 100) : 0
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `ingress-timeline-${Date.now()}.gif`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('GIF export failed:', err)
+    } finally {
+      isExporting = false
+      exportProgress = 0
+    }
   }
 
   function stepFromPointer(clientX: number): number {
@@ -157,5 +187,19 @@
     <span class="text-xs text-base-content/60 tabular-nums whitespace-nowrap">
       {timelineStep} / {entries.length}
     </span>
+
+    <button
+      class="btn btn-ghost btn-xs"
+      disabled={isExporting}
+      onclick={handleExport}
+      title={isExporting ? `Exporting ${exportProgress}%` : 'Export GIF'}
+    >
+      {#if isExporting}
+        <span class="loading loading-spinner loading-xs"></span>
+        <span class="text-xs ml-1">{exportProgress}%</span>
+      {:else}
+        🎞 GIF
+      {/if}
+    </button>
   {/if}
 </div>

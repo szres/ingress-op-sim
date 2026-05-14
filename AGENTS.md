@@ -98,7 +98,10 @@ src/
 │   ├── ToolBar.svelte       # Tool selection + clear all
 │   ├── MapCanvas.svelte     # Canvas rendering + mouse event handling
 │   ├── AgentPanel.svelte    # Right-side agent list with stats
-│   └── Timeline.svelte      # Playback timeline below canvas
+│   └── Timeline.svelte      # Playback timeline + GIF export
+├── utils/
+│   ├── gifEncoder.ts        # Pure JS GIF89a encoder (LZW + median-cut quantization)
+│   └── exportRender.ts      # Offscreen canvas frame renderer for GIF export
 └── pages/
     └── index.astro          # Layout composition
 ```
@@ -160,6 +163,16 @@ After each new link A-B by agent X:
 - **Hover labels**: Imported portal labels are hidden by default and shown only when mouse is within ~90px (larger than the 16px click radius).
 - **Portal tool disabled**: When portals are imported, the Portal creation tool is disabled and an "Imported" badge is shown in the toolbar.
 - **IITC JSON format**: Expects an array of objects with `{ guid, title, coordinates: { lat, lng }, link, image }`.
+
+## GIF Export
+
+- **Location**: Export button (🎞 GIF) in the Timeline bar, next to the step counter
+- **Playback speed**: GIF frame delay matches the current timeline `playSpeed` setting
+- **Content filtering**: Only portals that have at least one link are rendered in each frame
+- **Agent overlay**: A semi-transparent panel in the bottom-right corner shows each active agent's real-time stats (link count, field count, AP)
+- **Implementation**: Pure client-side — offscreen canvas renders each frame, median-cut quantization reduces to 256 colors, LZW compression produces GIF89a format
+- **Resolution**: 800×600 pixels, auto-fit viewport to linked portals bounding box
+- **First frame**: 500ms delay (blank state), subsequent frames use `playSpeed` delay
 
 ## Modification Rules
 
