@@ -121,7 +121,7 @@ interface Viewport {
 }
 
 function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, frame: FrameState, viewport: Viewport | null, portalTitles: Map<string, string>) {
-  ctx.fillStyle = '#1a1a2e'
+  ctx.fillStyle = '#0a1929'
   ctx.fillRect(0, 0, w, h)
 
   const { portals, links, fields, agents } = frame
@@ -143,6 +143,22 @@ function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, frame: F
 
   function tx(x: number) { return (x - minX) * scale + offsetX }
   function ty(y: number) { return (y - minY) * scale + offsetY }
+
+  const GRID_STEP = 50
+  const gridLeft = Math.floor(minX / GRID_STEP) * GRID_STEP
+  const gridTop = Math.floor(minY / GRID_STEP) * GRID_STEP
+  ctx.strokeStyle = 'rgba(100, 160, 220, 0.08)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let gx = gridLeft; gx <= maxX; gx += GRID_STEP) {
+    ctx.moveTo(tx(gx), ty(minY))
+    ctx.lineTo(tx(gx), ty(maxY))
+  }
+  for (let gy = gridTop; gy <= maxY; gy += GRID_STEP) {
+    ctx.moveTo(tx(minX), ty(gy))
+    ctx.lineTo(tx(maxX), ty(gy))
+  }
+  ctx.stroke()
 
   for (const f of fields) {
     const [p1Id, p2Id, p3Id, aId] = f

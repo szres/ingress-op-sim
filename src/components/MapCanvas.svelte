@@ -110,6 +110,25 @@
     // Apply viewport transform
     ctx.setTransform(scale, 0, 0, scale, -panX * scale, -panY * scale)
 
+    // Draw blueprint grid
+    const GRID_STEP = 50
+    const gridLeft = Math.floor(panX / GRID_STEP) * GRID_STEP
+    const gridTop = Math.floor(panY / GRID_STEP) * GRID_STEP
+    const gridRight = panX + w / scale
+    const gridBottom = panY + h / scale
+    ctx.strokeStyle = 'rgba(100, 160, 220, 0.08)'
+    ctx.lineWidth = 1 / scale
+    ctx.beginPath()
+    for (let x = gridLeft; x <= gridRight; x += GRID_STEP) {
+      ctx.moveTo(x, gridTop)
+      ctx.lineTo(x, gridBottom)
+    }
+    for (let y = gridTop; y <= gridBottom; y += GRID_STEP) {
+      ctx.moveTo(gridLeft, y)
+      ctx.lineTo(gridRight, y)
+    }
+    ctx.stroke()
+
     // Draw fields
     for (const f of fields) {
       const [p1Id, p2Id, p3Id, aId] = f
@@ -604,7 +623,7 @@
 <canvas
   bind:this={canvasEl}
   class="w-full h-full"
-  style="min-width: 200px; min-height: 200px; background: #1a1a2e; display: block; cursor: {isPanning ? 'grabbing' : cursorForbidden ? 'not-allowed' : 'default'};"
+  style="min-width: 200px; min-height: 200px; background: #0a1929; display: block; cursor: {isPanning ? 'grabbing' : cursorForbidden ? 'not-allowed' : 'default'};"
   onclick={handleClick}
   onmousemove={handleMouseMove}
   onmouseleave={handleMouseLeave}
