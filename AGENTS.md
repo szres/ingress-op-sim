@@ -43,6 +43,21 @@ interface GameState {
   pendingLinkPortalId: string | null  // first portal clicked in link mode
   portalSource: 'manual' | 'imported'  // how portals were created
   importedPortalTitles: Map<string, string>  // portal id → IITC title (imported only)
+  timelineEntries: TimelineEntry[]  // ordered link creation history
+  timelineStep: number              // 0 = initial, entries.length = latest (live)
+  isPlaying: boolean                // auto-playback state
+  playSpeed: number                 // ms per step (default 500)
+}
+```
+
+### TimelineEntry
+```ts
+interface TimelineEntry {
+  id: string            // unique id
+  srcId: string         // source portal id
+  tgtId: string         // target portal id
+  agentId: string       // agent who created the link
+  fieldsCreated: Field[] // fields detected at creation time
 }
 ```
 
@@ -82,7 +97,8 @@ src/
 ├── components/
 │   ├── ToolBar.svelte       # Tool selection + clear all
 │   ├── MapCanvas.svelte     # Canvas rendering + mouse event handling
-│   └── AgentPanel.svelte    # Right-side agent list with stats
+│   ├── AgentPanel.svelte    # Right-side agent list with stats
+│   └── Timeline.svelte      # Playback timeline below canvas
 └── pages/
     └── index.astro          # Layout composition
 ```
@@ -104,7 +120,9 @@ src/
 │                              │  └───────────────────┘ │
 │                              │  ...                   │
 │                              │  (scroll)              │
-└──────────────────────────────┴───────────────────────┘
+├──────────────────────────────┴───────────────────────┤
+│  [⏮] [▶/⏸] [⏭] [speed▾] ──●──●──●──◉──○──○── [5/12]│  ← Timeline
+└──────────────────────────────────────────────────────┘
 ```
 
 ## Key Actions (gameStore.ts)
@@ -123,6 +141,10 @@ src/
 | `importIITCPortals(json)` | Import portals from IITC JSON, clear existing data, switch to link mode |
 | `getImportedTitle(portalId)` | Returns IITC title for imported portal, or null |
 | `findNearbyPortals(x, y, portals, radius)` | Find all portals within larger radius (90px) for hover label display |
+| `goToTimelineStep(step)` | Jump to a specific timeline step, rebuild links/fields/agents from history |
+| `playTimeline()` | Auto-play timeline forward at configured speed, pauses at end |
+| `pauseTimeline()` | Stop auto-playback |
+| `setPlaySpeed(ms)` | Set playback interval (125–2000 ms) |
 
 ## Field Detection (detectNewFields)
 
