@@ -571,6 +571,51 @@ function createGameStore() {
     return get({ subscribe })
   }
 
+  function exportAgentKeys(agentId: string) {
+    const state = get({ subscribe })
+    const agent = state.agents.find(a => a.id === agentId)
+    if (!agent) {
+      toastStore.add('Agent not found', 'error')
+      return
+    }
+
+    const keyCounts = new Map<string, number>()
+    for (const [, tgtId, aId] of state.links) {
+      if (aId !== agentId) continue
+      keyCounts.set(tgtId, (keyCounts.get(tgtId) ?? 0) + 1)
+    }
+
+    if (keyCounts.size === 0) {
+      toastStore.add(`${agent.name} has no links`, 'warning')
+      return
+    }
+
+    const getLabel = (id: string) => {
+      if (state.portalSource === 'imported') {
+        return state.importedPortalTitles.get(id) ?? id
+      }
+      return state.portals.find(p => p.id === id)?.label ?? id
+    }
+
+    const sorted = [...keyCounts.entries()].sort((a, b) => b[1] - a[1])
+    const total = sorted.reduce((s, [, c]) => s + c, 0)
+    const items = sorted.map(([pid, count]) => `- ${getLabel(pid)} ×${count}`)
+
+    const md = [
+      `# ${agent.name} Key List`,
+      '',
+      ...items,
+      '',
+      `**Total: ${total} keys**`,
+      '',
+    ].join('\n')
+
+    navigator.clipboard.writeText(md).then(
+      () => toastStore.add('Key list copied to clipboard', 'success'),
+      () => toastStore.add('Failed to copy to clipboard', 'error'),
+    )
+  }
+
   function goToTimelineStep(step: number) {
     update(s => {
       const clamped = Math.max(0, Math.min(step, s.timelineEntries.length))
@@ -618,7 +663,7 @@ function createGameStore() {
     deletePortal, deleteLink,
     findPortalAt, findLinkAt, findNearbyPortals,
     clearAllPortals, clearAllLinks,
-    importIITCPortals, getImportedTitle,
+    importIITCPortals, getImportedTitle, exportAgentKeys,
     goToTimelineStep, playTimeline, pauseTimeline, setPlaySpeed,
   }
 }
