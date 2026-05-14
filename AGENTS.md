@@ -143,6 +143,7 @@ src/
 | `clearAll()` | Reset everything, agent stats to 0 |
 | `importIITCPortals(json)` | Import portals from IITC JSON, clear existing data, switch to link mode |
 | `getImportedTitle(portalId)` | Returns IITC title for imported portal, or null |
+| `exportAgentKeys(agentId)` | Export agent's per-portal key consumption as markdown table, copy to clipboard |
 | `findNearbyPortals(x, y, portals, radius)` | Find all portals within larger radius (90px) for hover label display |
 | `goToTimelineStep(step)` | Jump to a specific timeline step, rebuild links/fields/agents from history |
 | `playTimeline()` | Auto-play timeline forward at configured speed, pauses at end |
