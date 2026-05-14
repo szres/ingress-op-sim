@@ -43,6 +43,21 @@ interface GameState {
   pendingLinkPortalId: string | null  // first portal clicked in link mode
   portalSource: 'manual' | 'imported'  // how portals were created
   importedPortalTitles: Map<string, string>  // portal id → IITC title (imported only)
+  timelineEntries: TimelineEntry[]  // ordered link creation history
+  timelineStep: number              // 0 = initial, entries.length = latest (live)
+  isPlaying: boolean                // auto-playback state
+  playSpeed: number                 // ms per step (default 500)
+}
+```
+
+### TimelineEntry
+```ts
+interface TimelineEntry {
+  id: string            // unique id
+  srcId: string         // source portal id
+  tgtId: string         // target portal id
+  agentId: string       // agent who created the link
+  fieldsCreated: Field[] // fields detected at creation time
 }
 ```
 
@@ -82,7 +97,11 @@ src/
 ├── components/
 │   ├── ToolBar.svelte       # Tool selection + clear all
 │   ├── MapCanvas.svelte     # Canvas rendering + mouse event handling
-│   └── AgentPanel.svelte    # Right-side agent list with stats
+│   ├── AgentPanel.svelte    # Right-side agent list with stats
+│   └── Timeline.svelte      # Playback timeline + GIF export
+├── utils/
+│   ├── gifEncoder.ts        # Pure JS GIF89a encoder (LZW + median-cut quantization)
+│   └── exportRender.ts      # Offscreen canvas frame renderer for GIF export
 └── pages/
     └── index.astro          # Layout composition
 ```
@@ -104,7 +123,9 @@ src/
 │                              │  └───────────────────┘ │
 │                              │  ...                   │
 │                              │  (scroll)              │
-└──────────────────────────────┴───────────────────────┘
+├──────────────────────────────┴───────────────────────┤
+│  [⏮] [▶/⏸] [⏭] [speed▾] ──●──●──●──◉──○──○── [5/12]│  ← Timeline
+└──────────────────────────────────────────────────────┘
 ```
 
 ## Key Actions (gameStore.ts)
@@ -123,6 +144,10 @@ src/
 | `importIITCPortals(json)` | Import portals from IITC JSON, clear existing data, switch to link mode |
 | `getImportedTitle(portalId)` | Returns IITC title for imported portal, or null |
 | `findNearbyPortals(x, y, portals, radius)` | Find all portals within larger radius (90px) for hover label display |
+| `goToTimelineStep(step)` | Jump to a specific timeline step, rebuild links/fields/agents from history |
+| `playTimeline()` | Auto-play timeline forward at configured speed, pauses at end |
+| `pauseTimeline()` | Stop auto-playback |
+| `setPlaySpeed(ms)` | Set playback interval (125–2000 ms) |
 
 ## Field Detection (detectNewFields)
 
@@ -138,6 +163,16 @@ After each new link A-B by agent X:
 - **Hover labels**: Imported portal labels are hidden by default and shown only when mouse is within ~90px (larger than the 16px click radius).
 - **Portal tool disabled**: When portals are imported, the Portal creation tool is disabled and an "Imported" badge is shown in the toolbar.
 - **IITC JSON format**: Expects an array of objects with `{ guid, title, coordinates: { lat, lng }, link, image }`.
+
+## GIF Export
+
+- **Location**: Export button (🎞 GIF) in the Timeline bar, next to the step counter
+- **Playback speed**: GIF frame delay matches the current timeline `playSpeed` setting
+- **Content filtering**: Only portals that have at least one link are rendered in each frame
+- **Agent overlay**: A semi-transparent panel in the bottom-right corner shows each active agent's real-time stats (link count, field count, AP)
+- **Implementation**: Pure client-side — offscreen canvas renders each frame, median-cut quantization reduces to 256 colors, LZW compression produces GIF89a format
+- **Resolution**: 800×600 pixels, auto-fit viewport to linked portals bounding box
+- **First frame**: 500ms delay (blank state), subsequent frames use `playSpeed` delay
 
 ## Modification Rules
 
