@@ -1,6 +1,7 @@
 <script lang="ts">
   import { get } from 'svelte/store'
   import { gameStore, toastStore, type ToolMode } from '../stores/gameStore'
+  import { scoringRules } from '../stores/scoringRules'
 
   let gameState = $state(get(gameStore))
   let showClearPortalsModal = $state(false)
@@ -13,6 +14,11 @@
 
   function handleSetMode(m: ToolMode) {
     gameStore.setMode(m)
+  }
+
+  function handleScoringRuleChange(e: Event) {
+    const val = (e.target as HTMLSelectElement).value
+    gameStore.setScoringRule(val === '' ? null : val)
   }
 
   function handleClearPortals() {
@@ -101,6 +107,19 @@
       🗑 Clear Portals
     </button>
   {/if}
+
+  <div class="divider divider-horizontal mx-1"></div>
+
+  <select
+    class="select select-sm select-bordered w-auto"
+    value={gameState.scoringRuleId ?? ''}
+    onchange={handleScoringRuleChange}
+  >
+    <option value="">Scoring: None</option>
+    {#each scoringRules as rule}
+      <option value={rule.id}>{rule.label}</option>
+    {/each}
+  </select>
 </div>
 
 <!-- Clear Portals confirmation modal -->

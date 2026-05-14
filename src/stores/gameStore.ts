@@ -1,4 +1,5 @@
 import { writable, derived, get } from 'svelte/store'
+import { computeScores } from './scoringRules'
 
 // ---- Types ----
 
@@ -17,10 +18,11 @@ export interface Agent {
   linkCount: number
   fieldCount: number
   ap: number
+  score: number
 }
 
 export type Link = [sourceId: string, targetId: string, agentId: string]
-export type Field = [p1Id: string, p2Id: string, p3Id: string, agentId: string]
+export type Field = [p1Id: string, p2Id: string, p3Id: string, agentId: string, linkAgents?: [string, string, string]]
 
 export interface TimelineEntry {
   id: string
@@ -44,6 +46,7 @@ export interface GameState {
   timelineStep: number
   isPlaying: boolean
   playSpeed: number
+  scoringRuleId: string | null
 }
 
 export interface ToastMessage {
@@ -176,7 +179,7 @@ function createGameStore() {
   const { subscribe, update, set } = writable<GameState>({
     mode: 'portal',
     portals: [],
-    agents: [{ id: 'agent-default', name: 'Agent01', linkCount: 0, fieldCount: 0, ap: 0 }],
+    agents: [{ id: 'agent-default', name: 'Agent01', linkCount: 0, fieldCount: 0, ap: 0, score: 0 }],
     selectedAgentId: 'agent-default',
     links: [],
     fields: [],
@@ -187,6 +190,7 @@ function createGameStore() {
     timelineStep: 0,
     isPlaying: false,
     playSpeed: 1000,
+    scoringRuleId: null,
   })
 
   const selectedAgent = derived({ subscribe }, $state => {
@@ -194,7 +198,12 @@ function createGameStore() {
     return $state.agents.find(a => a.id === $state.selectedAgentId) ?? null
   })
 
-  function rebuildFromTimeline(entries: TimelineEntry[], step: number, agents: Agent[]): { links: Link[]; fields: Field[]; agents: Agent[] } {
+  function applyScores(s: GameState): GameState {
+    const scoreMap = computeScores({ links: s.links, fields: s.fields, agents: s.agents }, s.scoringRuleId)
+    return { ...s, agents: s.agents.map(a => ({ ...a, score: scoreMap.get(a.id) ?? 0 })) }
+  }
+
+  function rebuildFromTimeline(entries: TimelineEntry[], step: number, agents: Agent[], scoringRuleId: string | null): { links: Link[]; fields: Field[]; agents: Agent[] } {
     const slice = entries.slice(0, step)
     const links: Link[] = slice.map(e => [e.srcId, e.tgtId, e.agentId])
     const fields: Field[] = slice.flatMap(e => e.fieldsCreated)
@@ -209,10 +218,12 @@ function createGameStore() {
       stats.set(e.agentId, s)
     }
 
+    const scoreMap = computeScores({ links, fields, agents }, scoringRuleId)
+
     const newAgents = agents.map(a => {
       const s = stats.get(a.id)
-      if (!s) return { ...a, linkCount: 0, fieldCount: 0, ap: 0 }
-      return { ...a, ...s }
+      if (!s) return { ...a, linkCount: 0, fieldCount: 0, ap: 0, score: scoreMap.get(a.id) ?? 0 }
+      return { ...a, ...s, score: scoreMap.get(a.id) ?? 0 }
     })
 
     return { links, fields, agents: newAgents }
@@ -228,7 +239,7 @@ function createGameStore() {
     update(s => {
       if (s.agents.length >= 16) return s
       const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      return { ...s, agents: [...s.agents, { id, name, linkCount: 0, fieldCount: 0, ap: 0 }] }
+      return { ...s, agents: [...s.agents, { id, name, linkCount: 0, fieldCount: 0, ap: 0, score: 0 }] }
     })
   }
 
@@ -286,12 +297,25 @@ function createGameStore() {
       const newLink: Link = [srcId, tgtId, agent]
       const newFields = detectNewFields(s, agent, srcId, tgtId)
 
+      const linksWithNew = [...s.links, newLink]
+      const linkAgentLookup = new Map<string, string>()
+      for (const [a, b, aId] of linksWithNew) {
+        linkAgentLookup.set(sortPair(a, b).join(','), aId)
+      }
+      const enrichedFields: Field[] = newFields.map(f => {
+        const [p1, p2, p3, fAgent] = f
+        const la = linkAgentLookup.get(sortPair(p1, p2).join(',')) ?? fAgent
+        const lb = linkAgentLookup.get(sortPair(p2, p3).join(',')) ?? fAgent
+        const lc = linkAgentLookup.get(sortPair(p1, p3).join(',')) ?? fAgent
+        return [p1, p2, p3, fAgent, [la, lb, lc]]
+      })
+
       const newAgents = s.agents.map(a => {
         if (a.id !== agent) return a
         let { linkCount, fieldCount, ap } = a
         linkCount += 1
         ap += 313
-        for (const _ of newFields) {
+        for (const _ of enrichedFields) {
           fieldCount += 1
           ap += 1250
         }
@@ -304,18 +328,19 @@ function createGameStore() {
         srcId,
         tgtId,
         agentId: agent,
-        fieldsCreated: newFields,
+        fieldsCreated: enrichedFields,
       }
 
-      return {
+      const updated: GameState = {
         ...s,
         links: [...s.links, newLink],
-        fields: [...s.fields, ...newFields],
+        fields: [...s.fields, ...enrichedFields],
         agents: newAgents,
         pendingLinkPortalId: null,
         timelineEntries: [...truncatedEntries, newEntry],
         timelineStep: truncatedEntries.length + 1,
       }
+      return applyScores(updated)
     })
   }
 
@@ -348,7 +373,7 @@ function createGameStore() {
       const newEntries = s.timelineEntries.filter(e => e.srcId !== portalId && e.tgtId !== portalId)
       const newStep = Math.min(s.timelineStep, newEntries.length)
 
-      return {
+      const updated: GameState = {
         ...s,
         portals: s.portals.filter(p => p.id !== portalId),
         links: s.links.filter(([a, b]) => !(a === portalId || b === portalId)),
@@ -358,6 +383,7 @@ function createGameStore() {
         timelineEntries: newEntries,
         timelineStep: newStep,
       }
+      return applyScores(updated)
     })
   }
 
@@ -392,7 +418,8 @@ function createGameStore() {
       const newEntries = s.timelineEntries.filter((_, i) => i !== linkIdx)
       const newStep = Math.min(s.timelineStep, newEntries.length)
 
-      return { ...s, links: newLinks, fields: newFields, agents: newAgents, pendingLinkPortalId: null, timelineEntries: newEntries, timelineStep: newStep }
+      const updated: GameState = { ...s, links: newLinks, fields: newFields, agents: newAgents, pendingLinkPortalId: null, timelineEntries: newEntries, timelineStep: newStep }
+      return applyScores(updated)
     })
   }
 
@@ -468,7 +495,7 @@ function createGameStore() {
       pendingLinkPortalId: null,
       portalSource: 'manual',
       importedPortalTitles: new Map(),
-      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0 })),
+      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0, score: 0 })),
       timelineEntries: [],
       timelineStep: 0,
       isPlaying: false,
@@ -482,7 +509,7 @@ function createGameStore() {
       links: [],
       fields: [],
       pendingLinkPortalId: null,
-      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0 })),
+      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0, score: 0 })),
       timelineEntries: [],
       timelineStep: 0,
       isPlaying: false,
@@ -548,7 +575,7 @@ function createGameStore() {
       pendingLinkPortalId: null,
       portalSource: 'imported',
       importedPortalTitles: titles,
-      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0 })),
+      agents: s.agents.map(a => ({ ...a, linkCount: 0, fieldCount: 0, ap: 0, score: 0 })),
       mode: 'link',
       timelineEntries: [],
       timelineStep: 0,
@@ -625,7 +652,7 @@ function createGameStore() {
   function goToTimelineStep(step: number) {
     update(s => {
       const clamped = Math.max(0, Math.min(step, s.timelineEntries.length))
-      const rebuilt = rebuildFromTimeline(s.timelineEntries, clamped, s.agents)
+      const rebuilt = rebuildFromTimeline(s.timelineEntries, clamped, s.agents, s.scoringRuleId)
       return { ...s, ...rebuilt, timelineStep: clamped }
     })
   }
@@ -662,6 +689,10 @@ function createGameStore() {
     update(s => ({ ...s, playSpeed: ms }))
   }
 
+  function setScoringRule(ruleId: string | null) {
+    update(s => applyScores({ ...s, scoringRuleId: ruleId }))
+  }
+
   return {
     subscribe, set, selectedAgent, getState,
     setMode, addAgent, selectAgent, addPortal,
@@ -671,6 +702,7 @@ function createGameStore() {
     clearAllPortals, clearAllLinks,
     importIITCPortals, getImportedTitle, exportAgentKeys,
     goToTimelineStep, playTimeline, pauseTimeline, setPlaySpeed,
+    setScoringRule,
   }
 }
 

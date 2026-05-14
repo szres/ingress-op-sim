@@ -1,11 +1,12 @@
 <script lang="ts">
   import { gameStore, getAgentColor } from '../stores/gameStore'
 
-  let agents: Array<{ id: string; name: string; linkCount: number; fieldCount: number; ap: number }> = $state([])
+  let agents: Array<{ id: string; name: string; linkCount: number; fieldCount: number; ap: number; score: number }> = $state([])
   let selectedAgentId: string | null = $state(null)
   let totalPortals = $state(0)
   let totalLinks = $state(0)
   let totalFields = $state(0)
+  let scoringRuleId: string | null = $state(null)
 
   gameStore.subscribe(s => {
     agents = s.agents
@@ -13,6 +14,7 @@
     totalPortals = s.portals.length
     totalLinks = s.links.length
     totalFields = s.fields.length
+    scoringRuleId = s.scoringRuleId
   })
 
   function handleSelect(id: string) {
@@ -75,6 +77,9 @@
             </div>
             <div class="text-base font-mono text-base-content/60 mt-1">
               AP: <span class="text-warning font-bold">{agent.ap.toLocaleString()}</span>
+            </div>
+            <div class="text-base font-mono mt-1 {scoringRuleId ? 'text-base-content/60' : 'text-base-content/25'}">
+              Score: <span class={scoringRuleId ? 'text-info font-bold' : 'text-base-content/25'}>{agent.score}</span>
             </div>
           </button>
           {#if agent.linkCount > 0}
