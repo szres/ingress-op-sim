@@ -9,6 +9,7 @@
   let agents: Agent[] = $state([])
   let portals: Portal[] = $state([])
   let importedPortalTitles: Map<string, string> = $state(new Map())
+  let scoringRuleId: string | null = $state(null)
 
   let trackEl: HTMLDivElement | null = $state(null)
   let isDragging = $state(false)
@@ -23,6 +24,7 @@
     agents = s.agents
     portals = s.portals
     importedPortalTitles = s.importedPortalTitles
+    scoringRuleId = s.scoringRuleId
   })
 
   const speedOptions = [
@@ -62,7 +64,7 @@
     isExporting = true
     exportProgress = 0
     try {
-      const blob = await exportTimelineGif(entries, portals, agents, importedPortalTitles, playSpeed, (step, total) => {
+      const blob = await exportTimelineGif(entries, portals, agents, importedPortalTitles, playSpeed, scoringRuleId, (step, total) => {
         exportProgress = total > 0 ? Math.round((step / total) * 100) : 0
       })
       const url = URL.createObjectURL(blob)

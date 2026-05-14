@@ -1,5 +1,6 @@
 import type { Portal, Link, Field, Agent, TimelineEntry } from '../stores/gameStore'
 import { getAgentColor, LINK_WARNING_THRESHOLD, MAX_LINKS_PER_PORTAL } from '../stores/gameStore'
+import { computeScores } from '../stores/scoringRules'
 import { GifEncoder } from './gifEncoder'
 
 const PORTAL_RADIUS = 12
@@ -24,6 +25,7 @@ function rebuildFrame(
   allAgents: Agent[],
   participatingAgentIds: Set<string>,
   allLinkedPortalIds: Set<string>,
+  scoringRuleId: string | null,
 ): FrameState {
   const slice = entries.slice(0, step)
   const links: Link[] = slice.map(e => [e.srcId, e.tgtId, e.agentId])
@@ -41,12 +43,14 @@ function rebuildFrame(
     stats.set(e.agentId, s)
   }
 
+  const scoreMap = computeScores({ links, fields, agents: allAgents }, scoringRuleId)
+
   const agents = allAgents
     .filter(a => participatingAgentIds.has(a.id))
     .map(a => {
       const s = stats.get(a.id)
-      if (!s) return { ...a, linkCount: 0, fieldCount: 0, ap: 0 }
-      return { ...a, ...s }
+      if (!s) return { ...a, linkCount: 0, fieldCount: 0, ap: 0, score: scoreMap.get(a.id) ?? 0 }
+      return { ...a, ...s, score: scoreMap.get(a.id) ?? 0 }
     })
 
   const newEntry = step > 0 && step <= entries.length ? entries[step - 1] : null
@@ -77,7 +81,7 @@ function drawAgentOverlay(ctx: CanvasRenderingContext2D, agents: Agent[], w: num
 
   const lineH = 18
   const headerH = 22
-  const panelW = 200
+  const panelW = 260
   const panelH = headerH + agents.length * lineH + 10
   const px = w - panelW - 10
   const py = h - panelH - 10
@@ -102,7 +106,7 @@ function drawAgentOverlay(ctx: CanvasRenderingContext2D, agents: Agent[], w: num
 
     ctx.fillStyle = a.linkCount > 0 ? '#cccccc' : '#666666'
     ctx.font = '10px monospace'
-    const stats = `L:${a.linkCount} F:${a.fieldCount} AP:${a.ap.toLocaleString()}`
+    const stats = `L:${a.linkCount} F:${a.fieldCount} AP:${a.ap.toLocaleString()} S:${a.score}`
     ctx.fillText(stats, px + 80, y + 2)
 
     y += lineH
@@ -252,6 +256,7 @@ export async function exportTimelineGif(
   allAgents: Agent[],
   portalTitles: Map<string, string>,
   playSpeed: number,
+  scoringRuleId: string | null,
   onProgress?: (step: number, total: number) => void,
 ): Promise<Blob> {
   const CW = 800
@@ -287,7 +292,7 @@ export async function exportTimelineGif(
   }
 
   for (let step = 0; step <= totalSteps; step++) {
-    const frame = rebuildFrame(entries, step, allPortals, allAgents, participatingAgentIds, allLinkedPortalIds)
+    const frame = rebuildFrame(entries, step, allPortals, allAgents, participatingAgentIds, allLinkedPortalIds, scoringRuleId)
     drawFrame(ctx, CW, CH, frame, globalViewport, portalTitles)
 
     const rgba = ctx.getImageData(0, 0, CW, CH).data

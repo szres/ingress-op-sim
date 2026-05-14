@@ -18,7 +18,7 @@ interface Portal { id: string; x: number; y: number; label: string }
 
 ### Agent
 ```ts
-interface Agent { id: string; name: string; linkCount: number; fieldCount: number; ap: number }
+interface Agent { id: string; name: string; linkCount: number; fieldCount: number; ap: number; score: number }
 ```
 
 ### Link
@@ -28,8 +28,10 @@ type Link = [sourceId: string, targetId: string, agentId: string]
 
 ### Field
 ```ts
-type Field = [p1Id: string, p2Id: string, p3Id: string, agentId: string]
+type Field = [p1Id: string, p2Id: string, p3Id: string, agentId: string, linkAgents?: [string, string, string]]
 ```
+- `agentId` = agent who created the link that completed the field
+- `linkAgents` (optional) = agentId of each of the 3 boundary links (sorted by portal pair). Used by scoring rules to determine per-agent field points.
 
 ### GameState
 ```ts
@@ -47,6 +49,7 @@ interface GameState {
   timelineStep: number              // 0 = initial, entries.length = latest (live)
   isPlaying: boolean                // auto-playback state
   playSpeed: number                 // ms per step (default 500)
+  scoringRuleId: string | null      // active scoring rule (null = none)
 }
 ```
 
@@ -72,6 +75,9 @@ Located at the top of the screen:
 | **Delete** | 🗑 | Click portal → delete portal + all its links/fields; click link → delete single link |
 | **Import IITC** | 📥 | Import portals from IITC JSON export. Clears existing data. Switches to link mode. |
 
+### Scoring Rule Dropdown
+A `<select>` dropdown in the toolbar allows selecting a scoring rule. Options: "None" (default) + all rules defined in `scoringRules.ts`. When a rule is selected, per-agent scores are computed and displayed in agent cards.
+
 ## Agent Panel
 
 Located on the right side:
@@ -93,7 +99,8 @@ Located on the right side:
 ```
 src/
 ├── stores/
-│   └── gameStore.ts        # Global state (writable store) + all actions
+│   ├── gameStore.ts        # Global state (writable store) + all actions
+│   └── scoringRules.ts     # Scoring rule definitions + compute helpers
 ├── components/
 │   ├── ToolBar.svelte       # Tool selection + clear all
 │   ├── MapCanvas.svelte     # Canvas rendering + mouse event handling
@@ -149,6 +156,7 @@ src/
 | `playTimeline()` | Auto-play timeline forward at configured speed, pauses at end |
 | `pauseTimeline()` | Stop auto-playback |
 | `setPlaySpeed(ms)` | Set playback interval (125–2000 ms) |
+| `setScoringRule(ruleId)` | Set active scoring rule and recompute all agent scores |
 
 ## Field Detection (detectNewFields)
 
@@ -174,6 +182,33 @@ After each new link A-B by agent X:
 - **Implementation**: Pure client-side — offscreen canvas renders each frame, median-cut quantization reduces to 256 colors, LZW compression produces GIF89a format
 - **Resolution**: 800×600 pixels, auto-fit viewport to linked portals bounding box
 - **First frame**: 500ms delay (blank state), subsequent frames use `playSpeed` delay
+
+## Scoring Rules
+
+Pluggable scoring system defined in `src/stores/scoringRules.ts`. Each rule implements the `ScoringRule` interface:
+
+```ts
+interface ScoringRule {
+  id: string
+  label: string
+  compute(ctx: { links: Link[]; fields: Field[]; agents: Agent[] }): Map<string, number>
+}
+```
+
+### Adding a New Rule
+1. Add a `ScoringRule` object to the `scoringRules` array in `scoringRules.ts`
+2. Implement the `compute()` function
+3. The toolbar dropdown auto-populates from the array — no other changes needed
+
+### Current Rules
+
+#### 2026 Orion Global Op
+| Event | Points |
+|-------|--------|
+| Create 1 link | +2 to link agent |
+| Field with 3 links by 1 agent | +4 to that agent |
+| Field with 3 links by 2 agents | +12 to each of the 2 agents |
+| Field with 3 links by 3 agents | +30 to each of the 3 agents |
 
 ## Modification Rules
 
