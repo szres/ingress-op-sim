@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { gameStore, getAgentColor } from '../stores/gameStore'
 
   let agents: Array<{ id: string; name: string; linkCount: number; fieldCount: number; ap: number; score: number }> = $state([])
@@ -19,6 +20,24 @@
     totalLinks = s.links.length
     totalFields = s.fields.length
     scoringRuleId = s.scoringRuleId
+  })
+
+  onMount(() => {
+    function handleKeydown(e: KeyboardEvent) {
+      if (editingAgentId) return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      const num = parseInt(e.key, 10)
+      if (num >= 1 && num <= 9) {
+        const idx = num - 1
+        if (idx < agents.length) {
+          const agent = agents[idx]
+          gameStore.selectAgent(selectedAgentId === agent.id ? null : agent.id)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
   })
 
   function handleSelect(id: string) {
@@ -85,7 +104,7 @@
         Click below to add one.
       </div>
     {:else}
-      {#each agents as agent (agent.id)}
+      {#each agents as agent, idx (agent.id)}
         <div
           class="relative card compact bg-base-200 p-3.5 hover:bg-base-300 transition-colors border-2 cursor-pointer"
           class:border-primary={selectedAgentId === agent.id}
@@ -122,6 +141,9 @@
                   </button>
                 </div>
               {:else}
+                {#if idx < 9}
+                  <kbd class="kbd kbd-xs opacity-50">{idx + 1}</kbd>
+                {/if}
                 <span class="font-semibold text-base truncate" style="color: {getAgentColor(agent.id, agents)}">{agent.name}</span>
                 <button
                   class="btn btn-xs btn-ghost p-0 shrink-0 text-base-content/30 hover:text-base-content/70"
