@@ -280,9 +280,8 @@
 
     // Compute outbound link counts per portal
     const outboundCounts = new Map<string, number>()
-    for (const [a, b] of links) {
+    for (const [a] of links) {
       outboundCounts.set(a, (outboundCounts.get(a) ?? 0) + 1)
-      outboundCounts.set(b, (outboundCounts.get(b) ?? 0) + 1)
     }
 
     // Draw outbound link count on portal center when > threshold

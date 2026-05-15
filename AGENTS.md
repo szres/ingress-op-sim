@@ -94,7 +94,7 @@ Located on the right side:
 2. **Multi-layer fields**: All possible triangles are detected when a link is added. Multiple overlapping fields are supported (AP awarded for each).
 3. **Cascade deletion**: Deleting a portal removes all its links; removing links removes any fields that depended on those links.
 4. **AP**: Link = +313 AP, Field = +1250 AP
-5. **Outbound link limit**: Each portal can have at most 40 outbound links (simulating 4 SBUL mods). Link creation is rejected with an error if either portal has reached this limit.
+5. **Outbound link limit**: Each portal can have at most 40 outbound links (simulating 4 SBUL mods). Link creation is rejected with an error if the source portal has reached this limit. Inbound links have no limit.
 6. **Outbound link count display**: When a portal's outbound link count exceeds 8, the count is rendered in the portal's center on the canvas. Color is yellow normally, red when at the 40-link maximum.
 
 ## File Structure

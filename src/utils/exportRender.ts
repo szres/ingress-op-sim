@@ -219,9 +219,8 @@ function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, frame: F
   }
 
   const outboundCounts = new Map<string, number>()
-  for (const [a, b] of links) {
+  for (const [a] of links) {
     outboundCounts.set(a, (outboundCounts.get(a) ?? 0) + 1)
-    outboundCounts.set(b, (outboundCounts.get(b) ?? 0) + 1)
   }
   for (const p of portals) {
     const count = outboundCounts.get(p.id) ?? 0
