@@ -305,16 +305,10 @@ function createGameStore() {
         return { ...s, pendingLinkPortalId: null }
       }
 
-      const srcOut = s.links.filter(l => l[0] === srcId || l[1] === srcId).length
-      const tgtOut = s.links.filter(l => l[0] === tgtId || l[1] === tgtId).length
+      const srcOut = s.links.filter(l => l[0] === srcId).length
       if (srcOut >= MAX_LINKS_PER_PORTAL) {
         const label = s.portalSource === 'imported' ? (s.importedPortalTitles.get(srcId) ?? srcId) : (s.portals.find(p => p.id === srcId)?.label ?? srcId)
-        toastStore.add(`${label} has reached the maximum of ${MAX_LINKS_PER_PORTAL} links!`, 'error')
-        return { ...s, pendingLinkPortalId: null }
-      }
-      if (tgtOut >= MAX_LINKS_PER_PORTAL) {
-        const label = s.portalSource === 'imported' ? (s.importedPortalTitles.get(tgtId) ?? tgtId) : (s.portals.find(p => p.id === tgtId)?.label ?? tgtId)
-        toastStore.add(`${label} has reached the maximum of ${MAX_LINKS_PER_PORTAL} links!`, 'error')
+        toastStore.add(`${label} has reached the maximum of ${MAX_LINKS_PER_PORTAL} outbound links!`, 'error')
         return { ...s, pendingLinkPortalId: null }
       }
 
