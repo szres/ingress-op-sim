@@ -105,7 +105,10 @@ src/
 │   ├── ToolBar.svelte       # Tool selection + clear all
 │   ├── MapCanvas.svelte     # Canvas rendering + mouse event handling
 │   ├── AgentPanel.svelte    # Right-side agent list with stats
-│   └── Timeline.svelte      # Playback timeline + GIF export
+│   ├── Timeline.svelte      # Playback timeline + GIF export
+│   └── ThemeToggle.svelte   # Light/dark mode toggle (DaisyUI swap)
+├── layouts/
+│   └── Layout.astro         # HTML shell + theme init + PWA
 ├── utils/
 │   ├── gifEncoder.ts        # Pure JS GIF89a encoder (LZW + median-cut quantization)
 │   └── exportRender.ts      # Offscreen canvas frame renderer for GIF export
@@ -117,7 +120,7 @@ src/
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  [📍 Portal] [🔗 Link] [🗑 Delete]          [Clear]│  ← ToolBar
+│  [📍 Portal] [🔗 Link] [🗑 Delete]    [Clear] [🌙]│  ← ToolBar
 ├──────────────────────────────┬───────────────────────┤
 │                              │  Agents               │
 │                              │  ┌─ Agent 1 ────────┐ │
@@ -134,6 +137,14 @@ src/
 │  [⏮] [▶/⏸] [⏭] [speed▾] ──●──●──●──◉──○──○── [5/12]│  ← Timeline
 └──────────────────────────────────────────────────────┘
 ```
+
+## Theming
+
+- Custom DaisyUI themes: `xianii-dark` (default) and `xianii-light`, defined in `src/styles/global.css`
+- Theme toggle in top-right of toolbar using DaisyUI `swap` component
+- Theme preference persisted to `localStorage` (key: `theme`)
+- Inline `<script>` in `Layout.astro` restores saved theme before paint to avoid FOUC
+- DaisyUI components used: `btn`, `btn-group`, `badge`, `card`, `dialog` (modal), `select`, `swap`, `join`, `alert`, `toast`, `loading`
 
 ## Key Actions (gameStore.ts)
 

@@ -2,10 +2,11 @@
   import { get } from 'svelte/store'
   import { gameStore, toastStore, type ToolMode } from '../stores/gameStore'
   import { scoringRules } from '../stores/scoringRules'
+  import ThemeToggle from './ThemeToggle.svelte'
 
   let gameState = $state(get(gameStore))
-  let showClearPortalsModal = $state(false)
-  let showClearLinksModal = $state(false)
+  let clearPortalsDialog = $state<HTMLDialogElement>()
+  let clearLinksDialog = $state<HTMLDialogElement>()
   let fileInput: HTMLInputElement
 
   gameStore.subscribe(s => {
@@ -23,12 +24,12 @@
 
   function handleClearPortals() {
     gameStore.clearAllPortals()
-    showClearPortalsModal = false
+    clearPortalsDialog?.close()
   }
 
   function handleClearLinks() {
     gameStore.clearAllLinks()
-    showClearLinksModal = false
+    clearLinksDialog?.close()
   }
 
   function handleImportClick() {
@@ -55,7 +56,6 @@
 </script>
 
 <div class="flex items-center gap-2 p-2 bg-base-100 border-b border-base-300 flex-wrap">
-  <!-- Tool buttons -->
   <div class="btn-group btn-group-sm">
     <button
       class="btn btn-sm {gameState.mode === 'portal' ? 'btn-primary' : 'btn-ghost'} {gameState.portalSource === 'imported' ? 'btn-disabled' : ''}"
@@ -84,7 +84,6 @@
 
   <div class="flex-1"></div>
 
-  <!-- Import button -->
   <input
     bind:this={fileInput}
     type="file"
@@ -101,14 +100,13 @@
     📥 Import IITC
   </button>
 
-  <!-- Clear buttons -->
   {#if gameState.links.length > 0 || gameState.fields.length > 0}
-    <button class="btn btn-sm btn-warning btn-outline" onclick={() => { showClearLinksModal = true }}>
+    <button class="btn btn-sm btn-warning btn-outline" onclick={() => clearLinksDialog?.showModal()}>
       ✂ Clear Links
     </button>
   {/if}
   {#if gameState.portals.length > 0}
-    <button class="btn btn-sm btn-error btn-outline" onclick={() => { showClearPortalsModal = true }}>
+    <button class="btn btn-sm btn-error btn-outline" onclick={() => clearPortalsDialog?.showModal()}>
       🗑 Clear Portals
     </button>
   {/if}
@@ -125,52 +123,42 @@
       <option value={rule.id}>{rule.label}</option>
     {/each}
   </select>
+
+  <ThemeToggle />
 </div>
 
-<!-- Clear Portals confirmation modal -->
-{#if showClearPortalsModal}
-  <div
-    class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
-    onclick={() => { showClearPortalsModal = false }}
-  >
-    <div
-      class="card bg-base-100 shadow-xl w-80"
-      onclick={(e) => e.stopPropagation()}
-    >
-      <div class="card-body">
-        <h3 class="card-title text-error">Clear All Portals?</h3>
-        <p class="text-sm text-base-content/70">
-          This will delete all portals, links and fields. Agent stats will be reset to 0. This cannot be undone.
-        </p>
-        <div class="card-actions justify-end mt-2">
-          <button class="btn btn-ghost btn-sm" onclick={() => { showClearPortalsModal = false }}>Cancel</button>
-          <button class="btn btn-error btn-sm" onclick={handleClearPortals}>Clear All</button>
-        </div>
-      </div>
+<dialog class="modal" bind:this={clearPortalsDialog}>
+  <div class="modal-box">
+    <h3 class="text-lg font-bold text-error">Clear All Portals?</h3>
+    <p class="py-4 text-sm text-base-content/70">
+      This will delete all portals, links and fields. Agent stats will be reset to 0. This cannot be undone.
+    </p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn btn-ghost btn-sm">Cancel</button>
+      </form>
+      <button class="btn btn-error btn-sm" onclick={handleClearPortals}>Clear All</button>
     </div>
   </div>
-{/if}
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
 
-<!-- Clear Links confirmation modal -->
-{#if showClearLinksModal}
-  <div
-    class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
-    onclick={() => { showClearLinksModal = false }}
-  >
-    <div
-      class="card bg-base-100 shadow-xl w-80"
-      onclick={(e) => e.stopPropagation()}
-    >
-      <div class="card-body">
-        <h3 class="card-title text-warning">Clear All Links & Fields?</h3>
-        <p class="text-sm text-base-content/70">
-          This will delete all links and fields, but keep portals. Agent stats will be reset to 0.
-        </p>
-        <div class="card-actions justify-end mt-2">
-          <button class="btn btn-ghost btn-sm" onclick={() => { showClearLinksModal = false }}>Cancel</button>
-          <button class="btn btn-warning btn-sm" onclick={handleClearLinks}>Clear Links</button>
-        </div>
-      </div>
+<dialog class="modal" bind:this={clearLinksDialog}>
+  <div class="modal-box">
+    <h3 class="text-lg font-bold text-warning">Clear All Links & Fields?</h3>
+    <p class="py-4 text-sm text-base-content/70">
+      This will delete all links and fields, but keep portals. Agent stats will be reset to 0.
+    </p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn btn-ghost btn-sm">Cancel</button>
+      </form>
+      <button class="btn btn-warning btn-sm" onclick={handleClearLinks}>Clear Links</button>
     </div>
   </div>
-{/if}
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
