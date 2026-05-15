@@ -87,6 +87,7 @@ Located on the right side:
 - Top bar shows global stats: 📍 portal count, 🔗 link count, ⬡ field count
 - "+" button next to global stats to add agents (max 16, auto-named Agent01, Agent02...)
 - Click an agent card to select/deselect (highlighted with primary border)
+- Press number keys `1`–`9` to quickly select/deselect agents by position (kbd badge shown on each card)
 
 ## Ingress Rules (strict enforcement)
 
@@ -171,7 +172,7 @@ src/
 | `pauseTimeline()` | Stop auto-playback |
 | `setPlaySpeed(ms)` | Set playback interval (125–2000 ms) |
 | `setScoringRule(ruleId)` | Set active scoring rule and recompute all agent scores |
-| `exportPlan()` | Export entire plan as JSON file (portals, agents, timeline, scoring rule) |
+| `exportPlan()` | Export entire plan as JSON file (portals, agents, timeline, scoring rule). Excludes agents with no links. |
 | `importPlan(json)` | Import plan from JSON string, clear existing data, auto-play at max speed, trigger fit+center |
 
 ## Field Detection (detectNewFields)
@@ -191,7 +192,7 @@ After each new link A-B by agent X:
 
 ## Plan Export / Import
 
-- **Export**: Saves the entire plan as a JSON file containing portals, agents (id + name), timeline entries, portal source, imported titles, and scoring rule. Only available when at least one link exists.
+- **Export**: Saves the entire plan as a JSON file containing portals, agents (id + name), timeline entries, portal source, imported titles, and scoring rule. Only available when at least one link exists. Agents with no links are excluded from the export.
 - **Import**: Loads a plan from JSON, clearing all existing data. Only available when no portals exist (same condition as IITC import). After import, auto-plays the timeline at max speed (4x / 125ms per step).
 - **JSON format**:
 ```json

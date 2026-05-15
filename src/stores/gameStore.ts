@@ -714,12 +714,13 @@ function createGameStore() {
   function exportPlan() {
     const state = get({ subscribe })
     if (state.links.length === 0) return
+    const activeAgentIds = new Set(state.timelineEntries.map(e => e.agentId))
     const plan = {
       version: 1,
       portals: state.portals,
       portalSource: state.portalSource,
       importedPortalTitles: Object.fromEntries(state.importedPortalTitles),
-      agents: state.agents.map(a => ({ id: a.id, name: a.name })),
+      agents: state.agents.filter(a => activeAgentIds.has(a.id)).map(a => ({ id: a.id, name: a.name })),
       timelineEntries: state.timelineEntries,
       scoringRuleId: state.scoringRuleId,
     }
