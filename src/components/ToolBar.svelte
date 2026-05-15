@@ -92,7 +92,12 @@
     class="hidden"
     onchange={handleFileChange}
   />
-  <button class="btn btn-sm btn-accent btn-outline" onclick={handleImportClick}>
+  <button
+    class="btn btn-sm btn-accent btn-outline {gameState.portals.length > 0 ? 'btn-disabled' : ''}"
+    disabled={gameState.portals.length > 0}
+    onclick={handleImportClick}
+    title={gameState.portals.length > 0 ? 'Clear all portals before importing' : 'Import portals from IITC JSON'}
+  >
     📥 Import IITC
   </button>
 
