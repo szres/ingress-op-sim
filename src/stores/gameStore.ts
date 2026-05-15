@@ -247,6 +247,28 @@ function createGameStore() {
     update(s => ({ ...s, selectedAgentId: id }))
   }
 
+  function renameAgent(id: string, newName: string): { ok: boolean; error?: string } {
+    const trimmed = newName.trim()
+    if (trimmed.length === 0) return { ok: false, error: 'Name cannot be empty' }
+    if (trimmed.length > 32) return { ok: false, error: 'Name cannot exceed 32 characters' }
+    if (/[\\\/"'\x00-\x1f]/.test(trimmed)) return { ok: false, error: 'Name contains invalid characters' }
+
+    let finalName = trimmed
+    update(s => {
+      const others = s.agents.filter(a => a.id !== id).map(a => a.name)
+      if (others.includes(finalName)) {
+        let suffix = 2
+        while (others.includes(`${finalName}#${suffix}`)) suffix++
+        finalName = `${finalName}#${suffix}`
+      }
+      return {
+        ...s,
+        agents: s.agents.map(a => a.id === id ? { ...a, name: finalName } : a),
+      }
+    })
+    return { ok: true }
+  }
+
   function addPortal(x: number, y: number) {
     update(s => {
       const num = s.portals.length + 1
@@ -695,7 +717,7 @@ function createGameStore() {
 
   return {
     subscribe, set, selectedAgent, getState,
-    setMode, addAgent, selectAgent, addPortal,
+    setMode, addAgent, selectAgent, renameAgent, addPortal,
     handleLinkClick, handleCanvasClick,
     deletePortal, deleteLink,
     findPortalAt, findLinkAt, findNearbyPortals,

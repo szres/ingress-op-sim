@@ -8,6 +8,10 @@
   let totalFields = $state(0)
   let scoringRuleId: string | null = $state(null)
 
+  let editingAgentId: string | null = $state(null)
+  let editValue = $state('')
+  let editError = $state('')
+
   gameStore.subscribe(s => {
     agents = s.agents
     selectedAgentId = s.selectedAgentId
@@ -18,12 +22,41 @@
   })
 
   function handleSelect(id: string) {
+    if (editingAgentId === id) return
     gameStore.selectAgent(selectedAgentId === id ? null : id)
   }
 
   function handleAdd() {
     const nextNum = agents.length + 1
     gameStore.addAgent(`Agent${String(nextNum).padStart(2, '0')}`)
+  }
+
+  function startEdit(id: string, currentName: string) {
+    editingAgentId = id
+    editValue = currentName
+    editError = ''
+  }
+
+  function cancelEdit() {
+    editingAgentId = null
+    editValue = ''
+    editError = ''
+  }
+
+  function confirmEdit(id: string) {
+    const result = gameStore.renameAgent(id, editValue)
+    if (result.ok) {
+      editingAgentId = null
+      editValue = ''
+      editError = ''
+    } else {
+      editError = result.error ?? 'Invalid name'
+    }
+  }
+
+  function handleEditKeydown(e: KeyboardEvent, id: string) {
+    if (e.key === 'Enter') confirmEdit(id)
+    else if (e.key === 'Escape') cancelEdit()
   }
 </script>
 
@@ -64,7 +97,46 @@
             class="w-full text-left"
             onclick={() => handleSelect(agent.id)}
           >
-            <div class="font-semibold text-base" style="color: {getAgentColor(agent.id, agents)}">{agent.name}</div>
+            <div class="flex items-center gap-1.5">
+              {#if editingAgentId === agent.id}
+                <div class="flex items-center gap-1 flex-1 min-w-0" onclick={(e) => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    class="input input-xs input-bordered flex-1 min-w-0 max-w-36"
+                    value={editValue}
+                    oninput={(e) => { editValue = (e.target as HTMLInputElement).value; editError = '' }}
+                    onkeydown={(e) => handleEditKeydown(e, agent.id)}
+                    autofocus
+                  />
+                  <button
+                    class="btn btn-xs btn-success btn-ghost p-0.5"
+                    onclick={() => confirmEdit(agent.id)}
+                    title="Confirm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <button
+                    class="btn btn-xs btn-error btn-ghost p-0.5"
+                    onclick={cancelEdit}
+                    title="Cancel"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              {:else}
+                <span class="font-semibold text-base truncate" style="color: {getAgentColor(agent.id, agents)}">{agent.name}</span>
+                <button
+                  class="btn btn-xs btn-ghost p-0 shrink-0 text-base-content/30 hover:text-base-content/70"
+                  onclick={(e) => { e.stopPropagation(); startEdit(agent.id, agent.name) }}
+                  title="Edit name"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+              {/if}
+            </div>
+            {#if editingAgentId === agent.id && editError}
+              <div class="text-xs text-error mt-0.5">{editError}</div>
+            {/if}
             <div class="flex gap-4 text-sm text-base-content/70 mt-1">
               <span class="inline-flex items-center gap-0.5">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5" cy="19" r="2.5" fill="currentColor"/><circle cx="19" cy="5" r="2.5" fill="currentColor"/></svg>
