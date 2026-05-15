@@ -611,6 +611,31 @@
     clampPan()
   }
 
+  function fitViewCenter() {
+    const state = gameStore.getState()
+    const bbox = getPortalsBBox(state.portals)
+    if (!bbox) {
+      panX = 0
+      panY = 0
+      scale = 1
+      return
+    }
+    const rect = canvasEl.getBoundingClientRect()
+    if (rect.width < 1 || rect.height < 1) return
+    const bboxW = bbox.maxX - bbox.minX
+    const bboxH = bbox.maxY - bbox.minY
+    if (bboxW <= 0 || bboxH <= 0) return
+
+    scale = clamp(Math.min(rect.width / bboxW, rect.height / bboxH), 0.5, 2.0)
+
+    const viewW = rect.width / scale
+    const viewH = rect.height / scale
+    const bboxCenterX = (bbox.minX + bbox.maxX) / 2
+    const bboxCenterY = (bbox.minY + bbox.maxY) / 2
+    panX = bboxCenterX - viewW / 2
+    panY = bboxCenterY - viewH / 2
+  }
+
   function handleResize() {
     resizeCanvas()
     fitView()
@@ -664,16 +689,24 @@
     canvasEl.addEventListener('wheel', wheelHandler, { passive: false })
 
     let prevPortalsRef: Array<{ id: string; x: number; y: number; label: string }> | null = null
+    let prevFitViewNonce = 0
     const unsub = gameStore.subscribe((state) => {
       if (state.portals.length === 0) {
         panX = 0
         panY = 0
         scale = 1
         prevPortalsRef = null
-      } else if (state.portalSource === 'imported' && state.portals !== prevPortalsRef) {
-        fitView()
+      } else {
+        const portalsChanged = state.portals !== prevPortalsRef
+        const fitViewRequested = state._fitViewNonce !== prevFitViewNonce
+
+        if (fitViewRequested || (portalsChanged && state.portalSource === 'imported')) {
+          fitViewCenter()
+        }
+
+        prevPortalsRef = state.portals
       }
-      prevPortalsRef = state.portals
+      prevFitViewNonce = state._fitViewNonce
       render()
     })
 

@@ -8,6 +8,7 @@
   let clearPortalsDialog = $state<HTMLDialogElement>()
   let clearLinksDialog = $state<HTMLDialogElement>()
   let fileInput: HTMLInputElement
+  let planFileInput: HTMLInputElement
 
   gameStore.subscribe(s => {
     gameState = s
@@ -34,6 +35,32 @@
 
   function handleImportClick() {
     fileInput?.click()
+  }
+
+  function handlePlanImportClick() {
+    planFileInput?.click()
+  }
+
+  function handlePlanFileChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+    const MAX_SIZE = 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      toastStore.add(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 1MB.`, 'error')
+      input.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      gameStore.importPlan(reader.result as string)
+    }
+    reader.readAsText(file)
+    input.value = ''
+  }
+
+  function handleExportPlan() {
+    gameStore.exportPlan()
   }
 
   function handleFileChange(e: Event) {
@@ -91,6 +118,13 @@
     class="hidden"
     onchange={handleFileChange}
   />
+  <input
+    bind:this={planFileInput}
+    type="file"
+    accept=".json"
+    class="hidden"
+    onchange={handlePlanFileChange}
+  />
   <button
     class="btn btn-sm btn-accent btn-outline {gameState.portals.length > 0 ? 'btn-disabled' : ''}"
     disabled={gameState.portals.length > 0}
@@ -98,6 +132,22 @@
     title={gameState.portals.length > 0 ? 'Clear all portals before importing' : 'Import portals from IITC JSON'}
   >
     📥 Import IITC
+  </button>
+  <button
+    class="btn btn-sm btn-info btn-outline {gameState.portals.length > 0 ? 'btn-disabled' : ''}"
+    disabled={gameState.portals.length > 0}
+    onclick={handlePlanImportClick}
+    title={gameState.portals.length > 0 ? 'Clear all portals before importing' : 'Import a saved plan'}
+  >
+    📋 Import Plan
+  </button>
+  <button
+    class="btn btn-sm btn-success btn-outline {gameState.links.length === 0 ? 'btn-disabled' : ''}"
+    disabled={gameState.links.length === 0}
+    onclick={handleExportPlan}
+    title={gameState.links.length === 0 ? 'Create at least one link before exporting' : 'Export plan as JSON'}
+  >
+    💾 Export Plan
   </button>
 
   {#if gameState.links.length > 0 || gameState.fields.length > 0}
