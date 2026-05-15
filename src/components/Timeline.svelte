@@ -116,9 +116,9 @@
   {#if isEmpty}
     <span class="text-xs text-base-content/40 italic">No links recorded</span>
   {:else}
-    <div class="flex items-center gap-1">
+    <div class="join">
       <button
-        class="btn btn-ghost btn-xs"
+        class="join-item btn btn-ghost btn-xs"
         disabled={isAtStart}
         onclick={handleSkipStart}
         title="Skip to start"
@@ -126,14 +126,14 @@
         ⏮
       </button>
       <button
-        class="btn btn-ghost btn-xs"
+        class="join-item btn btn-ghost btn-xs"
         onclick={handlePlayPause}
         title={isPlaying ? 'Pause' : 'Play'}
       >
         {isPlaying ? '⏸' : '▶'}
       </button>
       <button
-        class="btn btn-ghost btn-xs"
+        class="join-item btn btn-ghost btn-xs"
         disabled={isAtEnd}
         onclick={handleSkipEnd}
         title="Skip to end"

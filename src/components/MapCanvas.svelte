@@ -28,6 +28,62 @@
   let panStartPanX = 0
   let panStartPanY = 0
 
+  // Theme-aware canvas colors
+  let isDark = $state(true)
+  const C = $derived(isDark ? {
+    bg: '#0a1929',
+    grid: 'rgba(100, 160, 220, 0.08)',
+    portalFill: '#009999',
+    portalStroke: '#00cccc',
+    portalGlow: 'rgba(0, 200, 200, 0.2)',
+    labelText: '#ffffff',
+    hoverLabelBg: '#ff8800',
+    hoverLabelBorder: '#000000',
+    hoverLabelText: '#000000',
+    keyBadgeBg: 'rgba(0, 0, 0, 0.6)',
+    keyBadgeText: '#ffcc00',
+    outboundNormal: '#ffcc00',
+    outboundMax: '#ff4444',
+    pendingLink: '#ff6600',
+    hoverLinkStroke: '#00ff88',
+    hoverLinkFill: 'rgba(0, 255, 136, 0.15)',
+    hoverDeleteStroke: '#ff4444',
+    hoverDeleteFill: 'rgba(255, 68, 68, 0.15)',
+    ghostFill: 'rgba(0, 153, 153, 0.3)',
+    ghostStroke: 'rgba(0, 204, 204, 0.5)',
+    ghostGlow: 'rgba(0, 200, 200, 0.1)',
+    ghostCloseFill: 'rgba(255, 50, 50, 0.4)',
+    ghostCloseStroke: '#ff3333',
+    ghostCloseGlow: 'rgba(255, 50, 50, 0.15)',
+    tooCloseX: '#ff3333',
+  } : {
+    bg: '#f0f4f8',
+    grid: 'rgba(100, 160, 220, 0.15)',
+    portalFill: '#0e7490',
+    portalStroke: '#22d3ee',
+    portalGlow: 'rgba(14, 116, 144, 0.15)',
+    labelText: '#1e293b',
+    hoverLabelBg: '#ea580c',
+    hoverLabelBorder: '#9a3412',
+    hoverLabelText: '#ffffff',
+    keyBadgeBg: 'rgba(0, 0, 0, 0.7)',
+    keyBadgeText: '#f59e0b',
+    outboundNormal: '#d97706',
+    outboundMax: '#dc2626',
+    pendingLink: '#ea580c',
+    hoverLinkStroke: '#059669',
+    hoverLinkFill: 'rgba(5, 150, 105, 0.12)',
+    hoverDeleteStroke: '#dc2626',
+    hoverDeleteFill: 'rgba(220, 38, 38, 0.12)',
+    ghostFill: 'rgba(14, 116, 144, 0.25)',
+    ghostStroke: 'rgba(14, 116, 144, 0.5)',
+    ghostGlow: 'rgba(14, 116, 144, 0.1)',
+    ghostCloseFill: 'rgba(220, 38, 38, 0.35)',
+    ghostCloseStroke: '#dc2626',
+    ghostCloseGlow: 'rgba(220, 38, 38, 0.12)',
+    tooCloseX: '#dc2626',
+  })
+
   function clamp(val: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, val))
   }
@@ -116,7 +172,7 @@
     const gridTop = Math.floor(panY / GRID_STEP) * GRID_STEP
     const gridRight = panX + w / scale
     const gridBottom = panY + h / scale
-    ctx.strokeStyle = 'rgba(100, 160, 220, 0.08)'
+    ctx.strokeStyle = C.grid
     ctx.lineWidth = 1 / scale
     ctx.beginPath()
     for (let x = gridLeft; x <= gridRight; x += GRID_STEP) {
@@ -176,7 +232,7 @@
     if (mode === 'link' && pendingLinkPortalId && mouseInCanvas) {
       const src = portals.find(p => p.id === pendingLinkPortalId)
       if (src) {
-        const color = selectedAgentId ? getAgentColor(selectedAgentId, agents) : '#ff6600'
+        const color = selectedAgentId ? getAgentColor(selectedAgentId, agents) : C.pendingLink
         const target = hoveredPortalId && hoveredPortalId !== pendingLinkPortalId
           ? portals.find(p => p.id === hoveredPortalId)
           : null
@@ -211,13 +267,13 @@
       if (p.id === hoveredPortalId) continue
       ctx.beginPath()
       ctx.arc(p.x, p.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI  * 2)
-      ctx.fillStyle = 'rgba(0, 200, 200, 0.2)'
+      ctx.fillStyle = C.portalGlow
       ctx.fill()
       ctx.beginPath()
       ctx.arc(p.x, p.y, PORTAL_RADIUS * ps, 0, Math.PI * 2)
-      ctx.fillStyle = '#009999'
+      ctx.fillStyle = C.portalFill
       ctx.fill()
-      ctx.strokeStyle = '#00cccc'
+      ctx.strokeStyle = C.portalStroke
       ctx.lineWidth = 2 * ps
       ctx.stroke()
     }
@@ -238,7 +294,7 @@
         ctx.font = `bold ${fontSize}px sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillStyle = isMax ? '#ff4444' : '#ffcc00'
+        ctx.fillStyle = isMax ? C.outboundMax : C.outboundNormal
         ctx.fillText(count.toString(), p.x, p.y)
       }
     }
@@ -253,11 +309,11 @@
         const badgeW = ctx.measureText(badgeText).width + 8 * ps
         const badgeX = p.x - badgeW / 2
         const badgeY = p.y + (PORTAL_RADIUS + 4) * ps
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+        ctx.fillStyle = C.keyBadgeBg
         ctx.beginPath()
         ctx.roundRect(badgeX, badgeY, badgeW, 16 * ps, 4 * ps)
         ctx.fill()
-        ctx.fillStyle = '#ffcc00'
+        ctx.fillStyle = C.keyBadgeText
         ctx.textAlign = 'center'
         ctx.fillText(badgeText, p.x, badgeY + 2 * ps)
       }
@@ -274,7 +330,7 @@
           ? (state.importedPortalTitles.get(p.id) ?? '')
           : p.label
         if (labelText) {
-          ctx.fillStyle = '#ffffff'
+          ctx.fillStyle = C.labelText
           ctx.font = `bold ${Math.round(11 * ps)}px sans-serif`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'bottom'
@@ -289,7 +345,7 @@
       if (sp) {
         ctx.beginPath()
         ctx.arc(sp.x, sp.y, (PORTAL_RADIUS + 5) * ps, 0, Math.PI * 2)
-        ctx.strokeStyle = '#ff6600'
+        ctx.strokeStyle = C.pendingLink
         ctx.lineWidth = 2 * ps
         ctx.stroke()
       }
@@ -301,12 +357,12 @@
       if (hp && hoveredPortalId !== pendingLinkPortalId) {
         ctx.beginPath()
         ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 6) * ps, 0, Math.PI * 2)
-        ctx.strokeStyle = '#00ff88'
+        ctx.strokeStyle = C.hoverLinkStroke
         ctx.lineWidth = 2.5 * ps
         ctx.stroke()
         ctx.beginPath()
         ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(0, 255, 136, 0.15)'
+        ctx.fillStyle = C.hoverLinkFill
         ctx.fill()
       }
     }
@@ -317,12 +373,12 @@
       if (hp) {
         ctx.beginPath()
         ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 6) * ps, 0, Math.PI * 2)
-        ctx.strokeStyle = '#ff4444'
+        ctx.strokeStyle = C.hoverDeleteStroke
         ctx.lineWidth = 2.5 * ps
         ctx.stroke()
         ctx.beginPath()
         ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255, 68, 68, 0.15)'
+        ctx.fillStyle = C.hoverDeleteFill
         ctx.fill()
       }
     }
@@ -334,13 +390,13 @@
         // Portal circle
         ctx.beginPath()
         ctx.arc(hp.x, hp.y, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(0, 200, 200, 0.2)'
+        ctx.fillStyle = C.portalGlow
         ctx.fill()
         ctx.beginPath()
         ctx.arc(hp.x, hp.y, PORTAL_RADIUS * ps, 0, Math.PI * 2)
-        ctx.fillStyle = '#009999'
+        ctx.fillStyle = C.portalFill
         ctx.fill()
-        ctx.strokeStyle = '#00cccc'
+        ctx.strokeStyle = C.portalStroke
         ctx.lineWidth = 2 * ps
         ctx.stroke()
 
@@ -360,14 +416,14 @@
           const bgY = hp.y - (PORTAL_RADIUS + 4) * ps - fontSize - padY
           const bgW = textW + padX * 2
           const bgH = fontSize + padY * 2
-          ctx.fillStyle = '#ff8800'
+          ctx.fillStyle = C.hoverLabelBg
           ctx.beginPath()
           ctx.roundRect(bgX, bgY, bgW, bgH, 4 * ps)
           ctx.fill()
-          ctx.strokeStyle = '#000000'
+          ctx.strokeStyle = C.hoverLabelBorder
           ctx.lineWidth = 1.5 * ps
           ctx.stroke()
-          ctx.fillStyle = '#000000'
+          ctx.fillStyle = C.hoverLabelText
           ctx.fillText(labelText, hp.x, hp.y - (PORTAL_RADIUS + 4) * ps)
         }
 
@@ -380,11 +436,11 @@
           const badgeW = ctx.measureText(badgeText).width + 8 * ps
           const badgeX = hp.x - badgeW / 2
           const badgeY = hp.y + (PORTAL_RADIUS + 4) * ps
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+          ctx.fillStyle = C.keyBadgeBg
           ctx.beginPath()
           ctx.roundRect(badgeX, badgeY, badgeW, 16 * ps, 4 * ps)
           ctx.fill()
-          ctx.fillStyle = '#ffcc00'
+          ctx.fillStyle = C.keyBadgeText
           ctx.textAlign = 'center'
           ctx.fillText(badgeText, hp.x, badgeY + 2 * ps)
         }
@@ -397,7 +453,7 @@
           ctx.font = `bold ${fontSize}px sans-serif`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.fillStyle = isMax ? '#ff4444' : '#ffcc00'
+          ctx.fillStyle = isMax ? C.outboundMax : C.outboundNormal
           ctx.fillText(count.toString(), hp.x, hp.y)
         }
       }
@@ -407,12 +463,12 @@
     if (mode === 'portal' && mouseInCanvas) {
       const nearestDist = portals.reduce((min, p) => Math.min(min, Math.hypot(mouseX - p.x, mouseY - p.y)), Infinity)
       const tooClose = nearestDist < MIN_PORTAL_DISTANCE
-      const fillColor = tooClose ? 'rgba(255, 50, 50, 0.4)' : 'rgba(0, 153, 153, 0.3)'
-      const strokeColor = tooClose ? '#ff3333' : 'rgba(0, 204, 204, 0.5)'
+      const fillColor = tooClose ? C.ghostCloseFill : C.ghostFill
+      const strokeColor = tooClose ? C.ghostCloseStroke : C.ghostStroke
 
       ctx.beginPath()
       ctx.arc(mouseX, mouseY, (PORTAL_RADIUS + 3) * ps, 0, Math.PI * 2)
-      ctx.fillStyle = tooClose ? 'rgba(255, 50, 50, 0.15)' : 'rgba(0, 200, 200, 0.1)'
+      ctx.fillStyle = tooClose ? C.ghostCloseGlow : C.ghostGlow
       ctx.fill()
       ctx.beginPath()
       ctx.arc(mouseX, mouseY, PORTAL_RADIUS * ps, 0, Math.PI * 2)
@@ -423,7 +479,7 @@
       ctx.stroke()
 
       if (tooClose) {
-        ctx.strokeStyle = '#ff3333'
+        ctx.strokeStyle = C.tooCloseX
         ctx.lineWidth = 2.5 * ps
         const s = 5 * ps
         ctx.beginPath()
@@ -564,6 +620,16 @@
   onMount(() => {
     ctx = canvasEl.getContext('2d')
 
+    // Read initial theme
+    isDark = document.documentElement.getAttribute('data-theme') !== 'xianii-light'
+
+    // Watch for theme changes and re-render
+    const themeObserver = new MutationObserver(() => {
+      isDark = document.documentElement.getAttribute('data-theme') !== 'xianii-light'
+      render()
+    })
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
     // Try to resize immediately, and retry if canvas has no size yet
     let attempts = 0
     const tryResize = () => {
@@ -612,6 +678,7 @@
     })
 
     return () => {
+      themeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('mouseup', globalMouseUp)
       canvasEl.removeEventListener('wheel', wheelHandler)
@@ -623,7 +690,7 @@
 <canvas
   bind:this={canvasEl}
   class="w-full h-full"
-  style="min-width: 200px; min-height: 200px; background: #0a1929; display: block; cursor: {isPanning ? 'grabbing' : cursorForbidden ? 'not-allowed' : 'default'};"
+  style="min-width: 200px; min-height: 200px; background: {C.bg}; display: block; cursor: {isPanning ? 'grabbing' : cursorForbidden ? 'not-allowed' : 'default'};"
   onclick={handleClick}
   onmousemove={handleMouseMove}
   onmouseleave={handleMouseLeave}

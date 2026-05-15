@@ -62,21 +62,19 @@
 
 <div class="flex flex-col h-full bg-base-100 border-l border-base-300">
   <!-- Global stats -->
-  <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-base-300 bg-base-200/50">
-    <div class="flex gap-4 text-sm">
-      <span class="text-info font-medium inline-flex items-center gap-0.5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>
-        {totalPortals}
-      </span>
-      <span class="text-success font-medium inline-flex items-center gap-0.5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5" cy="19" r="2.5" fill="currentColor"/><circle cx="19" cy="5" r="2.5" fill="currentColor"/></svg>
-        {totalLinks}
-      </span>
-      <span class="text-warning font-medium inline-flex items-center gap-0.5">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12,3 22,21 2,21"/></svg>
-        {totalFields}
-      </span>
-    </div>
+  <div class="flex items-center gap-2 px-3.5 py-2.5 border-b border-base-300 bg-base-200/50">
+    <span class="badge badge-info gap-1">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>
+      {totalPortals}
+    </span>
+    <span class="badge badge-success gap-1">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5" cy="19" r="2.5" fill="currentColor"/><circle cx="19" cy="5" r="2.5" fill="currentColor"/></svg>
+      {totalLinks}
+    </span>
+    <span class="badge badge-warning gap-1">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12,3 22,21 2,21"/></svg>
+      {totalFields}
+    </span>
   </div>
 
   <!-- Agent list -->
@@ -137,13 +135,13 @@
             {#if editingAgentId === agent.id && editError}
               <div class="text-xs text-error mt-0.5">{editError}</div>
             {/if}
-            <div class="flex gap-4 text-sm text-base-content/70 mt-1">
-              <span class="inline-flex items-center gap-0.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5" cy="19" r="2.5" fill="currentColor"/><circle cx="19" cy="5" r="2.5" fill="currentColor"/></svg>
+            <div class="flex gap-2 mt-1">
+              <span class="badge badge-sm badge-ghost gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5" cy="19" r="2.5" fill="currentColor"/><circle cx="19" cy="5" r="2.5" fill="currentColor"/></svg>
                 {agent.linkCount}
               </span>
-              <span class="inline-flex items-center gap-0.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12,3 22,21 2,21"/></svg>
+              <span class="badge badge-sm badge-ghost gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12,3 22,21 2,21"/></svg>
                 {agent.fieldCount}
               </span>
             </div>
