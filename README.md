@@ -17,6 +17,10 @@
 
 Open the [app](https://szres.github.io/ingress-op-sim/) in your browser. No login or installation required. Works offline after first visit (PWA).
 
+<p align="center">
+  <img src="./docs/screenshot.png" alt="screenshot"/>
+</p>
+
 ## Features
 
 - **Portal placement** — Click the canvas to drop portals (auto-named P1, P2, …), or import from IITC
