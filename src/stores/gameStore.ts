@@ -47,6 +47,7 @@ export interface GameState {
   isPlaying: boolean
   playSpeed: number
   scoringRuleId: string | null
+  _fitViewNonce: number
 }
 
 export interface ToastMessage {
@@ -191,6 +192,7 @@ function createGameStore() {
     isPlaying: false,
     playSpeed: 1000,
     scoringRuleId: null,
+    _fitViewNonce: 0,
   })
 
   const selectedAgent = derived({ subscribe }, $state => {
@@ -715,6 +717,88 @@ function createGameStore() {
     update(s => applyScores({ ...s, scoringRuleId: ruleId }))
   }
 
+  function exportPlan() {
+    const state = get({ subscribe })
+    if (state.links.length === 0) return
+    const plan = {
+      version: 1,
+      portals: state.portals,
+      portalSource: state.portalSource,
+      importedPortalTitles: Object.fromEntries(state.importedPortalTitles),
+      agents: state.agents.map(a => ({ id: a.id, name: a.name })),
+      timelineEntries: state.timelineEntries,
+      scoringRuleId: state.scoringRuleId,
+    }
+    const json = JSON.stringify(plan, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ingress-plan-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toastStore.add('Plan exported', 'success')
+  }
+
+  function importPlan(jsonStr: string) {
+    let plan: any
+    try {
+      plan = JSON.parse(jsonStr)
+    } catch {
+      toastStore.add('Invalid JSON file', 'error')
+      return
+    }
+    if (!plan || !Array.isArray(plan.portals) || !Array.isArray(plan.agents) || !Array.isArray(plan.timelineEntries)) {
+      toastStore.add('Invalid plan format', 'error')
+      return
+    }
+    if (plan.portals.length === 0) {
+      toastStore.add('Plan contains no portals', 'error')
+      return
+    }
+
+    const portals: Portal[] = plan.portals
+    const portalSource: 'manual' | 'imported' = plan.portalSource === 'imported' ? 'imported' : 'manual'
+    const importedPortalTitles = new Map<string, string>(
+      Object.entries(plan.importedPortalTitles ?? {}).map(([k, v]) => [k, String(v)])
+    )
+    const agents: Agent[] = plan.agents.map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      linkCount: 0,
+      fieldCount: 0,
+      ap: 0,
+      score: 0,
+    }))
+    const timelineEntries: TimelineEntry[] = plan.timelineEntries
+    const scoringRuleId: string | null = plan.scoringRuleId ?? null
+
+    if (playTimer) { clearTimeout(playTimer); playTimer = null }
+
+    update(s => ({
+      ...s,
+      portals,
+      portalSource,
+      importedPortalTitles,
+      agents: agents.length > 0 ? agents : s.agents,
+      selectedAgentId: agents.length > 0 ? agents[0].id : null,
+      links: [],
+      fields: [],
+      pendingLinkPortalId: null,
+      mode: 'link',
+      timelineEntries,
+      timelineStep: 0,
+      isPlaying: false,
+      playSpeed: 125,
+      scoringRuleId,
+      _fitViewNonce: s._fitViewNonce + 1,
+    }))
+
+    toastStore.add(`Imported plan with ${portals.length} portals, ${timelineEntries.length} links`, 'success')
+
+    setTimeout(() => playTimeline(), 50)
+  }
+
   return {
     subscribe, set, selectedAgent, getState,
     setMode, addAgent, selectAgent, renameAgent, addPortal,
@@ -725,6 +809,7 @@ function createGameStore() {
     importIITCPortals, getImportedTitle, exportAgentKeys,
     goToTimelineStep, playTimeline, pauseTimeline, setPlaySpeed,
     setScoringRule,
+    exportPlan, importPlan,
   }
 }
 

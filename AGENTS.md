@@ -50,6 +50,7 @@ interface GameState {
   isPlaying: boolean                // auto-playback state
   playSpeed: number                 // ms per step (default 500)
   scoringRuleId: string | null      // active scoring rule (null = none)
+  _fitViewNonce: number            // increment to trigger viewport fit+center in MapCanvas
 }
 ```
 
@@ -74,6 +75,8 @@ Located at the top of the screen:
 | **Link** | 🔗 | 1) Click portal A → 2) Click portal B → create link (uses selected agent) |
 | **Delete** | 🗑 | Click portal → delete portal + all its links/fields; click link → delete single link |
 | **Import IITC** | 📥 | Import portals from IITC JSON export. Clears existing data. Switches to link mode. |
+| **Import Plan** | 📋 | Import a saved plan (portals, agents, timeline). Clears existing data. Auto-plays at max speed. Disabled when portals exist. |
+| **Export Plan** | 💾 | Export entire plan as JSON (portals, agents, timeline). Disabled when no links. |
 
 ### Scoring Rule Dropdown
 A `<select>` dropdown in the toolbar allows selecting a scoring rule. Options: "None" (default) + all rules defined in `scoringRules.ts`. When a rule is selected, per-agent scores are computed and displayed in agent cards.
@@ -168,6 +171,8 @@ src/
 | `pauseTimeline()` | Stop auto-playback |
 | `setPlaySpeed(ms)` | Set playback interval (125–2000 ms) |
 | `setScoringRule(ruleId)` | Set active scoring rule and recompute all agent scores |
+| `exportPlan()` | Export entire plan as JSON file (portals, agents, timeline, scoring rule) |
+| `importPlan(json)` | Import plan from JSON string, clear existing data, auto-play at max speed, trigger fit+center |
 
 ## Field Detection (detectNewFields)
 
@@ -183,6 +188,24 @@ After each new link A-B by agent X:
 - **Hover labels**: Imported portal labels are hidden by default and shown only when mouse is within ~90px (larger than the 16px click radius).
 - **Portal tool disabled**: When portals are imported, the Portal creation tool is disabled and an "Imported" badge is shown in the toolbar.
 - **IITC JSON format**: Expects an array of objects with `{ guid, title, coordinates: { lat, lng }, link, image }`.
+
+## Plan Export / Import
+
+- **Export**: Saves the entire plan as a JSON file containing portals, agents (id + name), timeline entries, portal source, imported titles, and scoring rule. Only available when at least one link exists.
+- **Import**: Loads a plan from JSON, clearing all existing data. Only available when no portals exist (same condition as IITC import). After import, auto-plays the timeline at max speed (4x / 125ms per step).
+- **JSON format**:
+```json
+{
+  "version": 1,
+  "portals": [{ "id": "...", "x": 0, "y": 0, "label": "P1" }],
+  "portalSource": "manual",
+  "importedPortalTitles": {},
+  "agents": [{ "id": "...", "name": "Agent01" }],
+  "timelineEntries": [{ "id": "...", "srcId": "...", "tgtId": "...", "agentId": "...", "fieldsCreated": [] }],
+  "scoringRuleId": null
+}
+```
+- **Auto-fit view**: Both plan import and IITC import trigger automatic viewport centering and scaling to fit all portals.
 
 ## GIF Export
 
