@@ -21,6 +21,11 @@ Open the [app](https://szres.github.io/ingress-op-sim/) in your browser. No logi
   <img src="./docs/screenshot.png" alt="screenshot"/>
 </p>
 
+## Demo Video
+
+[![Bilibili](https://img.shields.io/badge/Bilibili-video-blue?logo=bilibili)](https://www.bilibili.com/video/BV1VJLS6qE34/)
+[![YouTube](https://img.shields.io/badge/YouTube-video-red?logo=youtube)](https://www.youtube.com/watch?v=Hdt8eF45x3o)
+
 ## Features
 
 - **Portal placement** — Click the canvas to drop portals (auto-named P1, P2, …), or import from IITC
